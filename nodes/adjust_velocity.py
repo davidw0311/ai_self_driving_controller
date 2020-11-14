@@ -11,11 +11,13 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Float32
 
 import time
+WIDTH = 1280
+HEIGHT = 720
 
 # taken from https://github.com/ivmech/ivPID
 class PID:
 
-    def __init__(self, P=0.2, I=0.0, D=0.0, current_time=None):
+    def __init__(self, P=0.0, I=0.0, D=0.0, current_time=None):
 
         self.Kp = P
         self.Ki = I
@@ -121,15 +123,15 @@ class velocity_control:
 
         # turning_factor = pid_control(centroid)
         turning_factor = 1
-        driving_speed = cv2.getTrackbarPos('driving speed', "PID Controller") / 10.0
-        turning_speed = cv2.getTrackbarPos('turning speed', "PID Controller") / 10.0
+        driving_speed = cv2.getTrackbarPos('driving speed', "PID Controller") / 100.0
+        turning_speed = cv2.getTrackbarPos('turning speed', "PID Controller") / 100.0
         
         self.pid_controller.setKp(cv2.getTrackbarPos('proportional', "PID Controller"))
         self.pid_controller.setKd(cv2.getTrackbarPos('derivative', "PID Controller"))
         self.pid_controller.setKi(cv2.getTrackbarPos('integral', "PID Controller"))
         
         
-        error = centroid - 640
+        error = centroid - WIDTH/2
         self.pid_controller.update(error, time.time())
 
         scaling_factor = cv2.getTrackbarPos('scale factor', "PID Controller")
@@ -151,8 +153,6 @@ class velocity_control:
         cv2.createTrackbar('driving speed','PID Controller',0,100,nothing)   
         cv2.createTrackbar('turning speed','PID Controller',0,100,nothing)
         
-
-
         cv2.createTrackbar('proportional','PID Controller',0,100,nothing)
         cv2.createTrackbar('derivative','PID Controller',0,100,nothing)
         cv2.createTrackbar('integral','PID Controller',0,100,nothing)
@@ -160,11 +160,11 @@ class velocity_control:
         
         if (time.time() - self.init_time) < 2.0:
             cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 10)
+            cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
 
-            cv2.setTrackbarPos('proportional', 'PID Controller', 11 )
-            cv2.setTrackbarPos('derivative', 'PID Controller', 2)
-            cv2.setTrackbarPos('integral', 'PID Controller', 1)
+            cv2.setTrackbarPos('proportional', 'PID Controller', 0)
+            cv2.setTrackbarPos('derivative', 'PID Controller', 0)
+            cv2.setTrackbarPos('integral', 'PID Controller', 0)
             cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
 
         velocity = self.get_velocity(self.centroid_location)
@@ -180,8 +180,12 @@ def main(args):
         rospy.spin()
     except KeyboardInterrupt:
         print("Shutting down")
-    cv2.destroyAllWindows()
     
+    cv2.destroyAllWindows()
+    stop_vel = Twist()
+    stop_vel.linear.x = 0
+    stop_vel.angular.z = 0
+    rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1).publish(stop_vel)
 
 if __name__ == '__main__':
     print('started adjust_velocity')
