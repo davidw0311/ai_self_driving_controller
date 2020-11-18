@@ -59,7 +59,7 @@ def process_frame(frame, last_cX, last_frame):
     dilation_kernel = np.ones((39,39), np.uint8)
     box_frame = cv2.inRange(original_frame, (90,0,0),(130,30,30))
     box_frame = cv2.dilate(box_frame, dilation_kernel, iterations = 1)
-
+    
 #     cv2.imshow('box frame', box_frame)
 #     cv2.imshow('expanded box', expanded_box_frame)
     lines_frame = cv2.bitwise_or(lines_frame, box_frame)
@@ -89,7 +89,7 @@ def process_frame(frame, last_cX, last_frame):
                 cv2.circle(original_frame, (cX, cY), 10, (200, 100, 200), -1)
     cv2.circle(original_frame, (grass_cX, grass_cY), 20, (200, 100, 200), -1)
 
-    if abs(grass_cX - width/2) < 200 and grass_cY > height/2:
+    if abs(grass_cX - width/2) < 200 and grass_cY > height/2 and np.sum(box_frame/255) < 80000:
           intersection_value = 1
     else:
           intersection_value = 0      

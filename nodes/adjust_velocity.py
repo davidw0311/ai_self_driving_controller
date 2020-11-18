@@ -192,7 +192,7 @@ class velocity_control:
         if self.at_intersection:
             velocity.linear.x = 0
             velocity.angular.z = -0.2
-            if time.time() - self.init_time < 10:
+            if time.time() - self.init_time < 8:
                 velocity.angular.z = 0.2
         
         if give_a_boost:
