@@ -1,5 +1,10 @@
 <launch>
     <node pkg="my_controller"
+          type="reporter.py"
+          name="reporter"
+          output="screen">
+    </node>
+    <node pkg="my_controller"
           type="process_image.py"
           name="process_image"
           output="screen">
@@ -9,4 +14,5 @@
           name="adjusts_robot_velocity"
           output="screen">
     </node>
+
 </launch>
