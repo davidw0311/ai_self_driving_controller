@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="my_controller"
+          type="reporter.py"
+          name="reporter"
+          output="screen">
+    </node>
+</launch>

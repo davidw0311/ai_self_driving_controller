@@ -6,7 +6,7 @@ from std_msgs.msg import String
 team_ID = 'donuts'
 team_psd = 'enph353'
 license_plate_found = False
-comp_time = 20                  # should be 4*60 seconds
+comp_time = 30                  # should be 4*60 seconds
 
 def reporter():
     pub = rospy.Publisher('/license_plate', String, queue_size=0)
@@ -14,6 +14,9 @@ def reporter():
 
     start_timer_str = msg(0,'strt')
     stop_timer_str = msg(-1,'stop')
+
+    rospy.sleep(1)
+    r = rospy.Rate(10)                  # 10 Hz
 
     rospy.loginfo(start_timer_str)
     pub.publish(start_timer_str)
@@ -32,6 +35,7 @@ def reporter():
             disp_time_str = str(curr_time) + ' seconds since competition timer started'
             print(disp_time_str)
             prev_time = curr_time
+        r.sleep()
     
     rospy.loginfo(stop_timer_str)
     pub.publish(stop_timer_str)
