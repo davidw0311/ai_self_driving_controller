@@ -107,7 +107,7 @@ def process_frame(frame, last_cX, last_frame):
 #     cv2.putText(original_frame,str(grass_cX) +' '+ str(grass_cY),(400,400), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 2, cv2.LINE_AA)
 
 #     cv2.imshow('grass frame', grass_frame)
-    cv2.imshow('road_frame', road_frame)
+#     cv2.imshow('road_frame', road_frame)
     cv2.waitKey(1)
     low_thresh, high_thresh = 50, 150
     edges = cv2.Canny(road_frame, low_thresh, high_thresh)
@@ -234,7 +234,9 @@ class image_converter:
     processed_image, location, at_crosswalk, moving_pedestrian, at_intersection = process_frame(np.copy(cv_image), self.last_location, self.last_frame)
     self.last_location = location
     self.last_frame = cv_image
-    cv2.imshow("Image window", processed_image)
+    width, height = processed_image.shape[1], processed_image.shape[0]
+    processed_image_resized = cv2.resize(processed_image, (int(width/4), int(height/4)) , interpolation = cv2.INTER_AREA)
+    cv2.imshow("Image window", processed_image_resized)
     # cv2.imshow('self last frame', self.last_frame)
     cv2.waitKey(1)
 
