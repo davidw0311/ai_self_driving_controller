@@ -6,13 +6,18 @@ roslib.load_manifest('my_controller')
 import sys
 import rospy
 import cv2
-from std_msgs.msg import String, Float32
+from std_msgs.msg import String, Float32, Bool
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 import math
 
-def process_frame(frame, last_cX):
+grass_centroids = []
+for t in range(20):
+      grass_centroids.append(0)
+
+def process_frame(frame, last_cX, last_frame):
+    
     original_frame = frame
     height = frame.shape[0]
     width = frame.shape[1]
@@ -21,24 +26,96 @@ def process_frame(frame, last_cX):
     road_frame[0:int(height/2),:] = np.zeros_like(road_frame[0:int(height/2),:])
     kernel = np.ones((9,9),np.uint8)
     lines_frame = cv2.inRange(original_frame, (245,245,245), (255,255,255))
-    box_frame = cv2.inRange(original_frame, (110,10,10),(130,30,30))
+
+    # detect the stop_walk
+    red_frame = cv2.inRange(original_frame, (0,0,245),(10,10,255))
+    M = cv2.moments(red_frame)
+    if M["m00"] != 0:
+        red_cX = int(M["m10"] / M["m00"])
+        red_cY = int(M["m01"] / M["m00"])
+    else:
+        red_cX = 0
+        red_cY = 0
+    
+    # cv2.imshow('red bar frame', red_frame)
+    at_crosswalk = False
+    moving_pedestrian = False
+    if (red_cY > 600):
+      #     cv2.imshow('original',original_frame)
+      #     cv2.imshow('last frame', last_frame)
+      #     cv2.waitKey(0)
+          at_crosswalk = True
+    if (red_cY > 100):
+          mse = np.sum((original_frame.astype("float") - last_frame.astype("float"))**2)
+          mse /= float(original_frame.shape[0] * original_frame.shape[1])
+          if (mse > 40):
+                moving_pedestrian = True
+                cv2.putText(original_frame,'MOVING PEDESTRIAN!',(400,100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 2, cv2.LINE_AA)
+
+    
+      #     print('mean squared error', mse)
+          
+
+    dilation_kernel = np.ones((39,39), np.uint8)
+    box_frame = cv2.inRange(original_frame, (90,0,0),(130,30,30))
+    box_frame = cv2.dilate(box_frame, dilation_kernel, iterations = 1)
+
+#     cv2.imshow('box frame', box_frame)
+#     cv2.imshow('expanded box', expanded_box_frame)
     lines_frame = cv2.bitwise_or(lines_frame, box_frame)
     # cv2.imshow('box frame', box_frame)
     lines_frame = cv2.dilate(lines_frame, kernel, iterations = 2)
     lines_frame = cv2.morphologyEx(lines_frame, cv2.MORPH_CLOSE, kernel)
     lines_frame = cv2.GaussianBlur(lines_frame, (7,7), 0)
     
+    road_frame = road_frame - box_frame
     road_frame = cv2.dilate(road_frame, kernel, iterations = 2)
     road_frame = cv2.morphologyEx(road_frame, cv2.MORPH_CLOSE, kernel)
     road_frame = cv2.GaussianBlur(road_frame, (7,7), 0)
+
+    grass_frame = cv2.inRange(original_frame, (55,125,15),(85,155,45))
+    grass_frame = cv2.erode(grass_frame, kernel, iterations=1)
+    grass_frame = cv2.dilate(grass_frame, kernel, iterations=3)
+    _, grass_contours, _ = cv2.findContours(grass_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
+    grass_cX, grass_cY = width, height
+    for c in grass_contours:
+          if cv2.contourArea(c) > 1500:
+                M = cv2.moments(c)
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                if (abs(cX-width/2) < abs(grass_cX-width/2)):
+                      grass_cX, grass_cY = (cX, cY)
+                cv2.circle(original_frame, (cX, cY), 10, (200, 100, 200), -1)
+    cv2.circle(original_frame, (grass_cX, grass_cY), 20, (200, 100, 200), -1)
+
+    if abs(grass_cX - width/2) < 200 and grass_cY > height/2:
+          intersection_value = 1
+    else:
+          intersection_value = 0      
+      
+    for i in range(len(grass_centroids) - 2, -1, -1):
+          grass_centroids[i+1] = grass_centroids[i]
+    grass_centroids[0] = intersection_value
+    
+    at_intersection = False
+    if sum(grass_centroids) > 15:
+          at_intersection = True
+          cv2.putText(original_frame,'INTERSECTION!!',(400,400), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 2, cv2.LINE_AA)
+    
+    
+#     cv2.putText(original_frame,str(grass_cX) +' '+ str(grass_cY),(400,400), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 2, cv2.LINE_AA)
+
+#     cv2.imshow('grass frame', grass_frame)
+    cv2.imshow('road_frame', road_frame)
+    cv2.waitKey(1)
     low_thresh, high_thresh = 50, 150
     edges = cv2.Canny(road_frame, low_thresh, high_thresh)
     # edges = cv2.dilate(edges, kernel, iterations=1)
 
-    cv2.imshow('lines frame dilated', lines_frame)
-    cv2.imshow('edges', edges)
-    cv2.imshow('road frame', road_frame)
+#     cv2.imshow('lines frame dilated', lines_frame)
+#     cv2.imshow('edges', edges)
+#     cv2.imshow('road frame', road_frame)
     cv2.waitKey(1)
 
 
@@ -110,143 +187,41 @@ def process_frame(frame, last_cX):
                       intersect_points.append((x,y))
                 
                 i += 1
-    print('slopes', slopes, 'total', sum(slopes))
-    print('\n')
+
     sum_x, sum_y = 0,0
     for point in intersect_points:
           sum_x += point[0]
           sum_y += point[1]
           cv2.circle(original_frame, point, 10, [0,255,0], -1)         
     if len(intersect_points) > 0:
-          cX = int(sum_x / len(intersect_points))
-          cY = int(sum_y / len(intersect_points))
+          line_cX = int(sum_x / len(intersect_points))
+          line_cY = int(sum_y / len(intersect_points))
     else:
-          cX = last_cX
-          cY = int(height/2)
-  
-    # print('length of lines', len(lines))
-    # while i < len(lines):
-    #       print('i', i)
-    #       line = lines[i]
-    #       try:
-    #         m = (line[0][3] - line[0][2]) / (line[0][1] - line[0][0]) #slope from x1, x2, y1, y2
-    #         b = line[0][2] - m * line[0][0]
-    #       except ZeroDivisionError as e:
-    #         m = float('inf')
-    #         b = None
-    #       j = i + 1
-    #       while j < len(lines):
-    #             # print('j', j)
-    #             # print('length of lines: ', len(lines))
-    #             other_line = lines[j]
-    #             # print('line', line)
-    #             # print('other line', other_line)
-    #             try:
-    #               other_m = (other_line[0][3] - other_line[0][2]) / (other_line[0][1] - other_line[0][0]) #slope
-    #               other_b = other_line[0][2] - other_m * other_line[0][0]
-    #             except ZeroDivisionError as e:
-    #               other_m = float('inf')
-    #               other_b = None
-    #             # print('m', m, 'other m', other_m)
-    #             # print('difference in angle deg:',(abs(math.atan(m) - math.atan(other_m))) * 180/np.pi )
-    #             if (abs(math.atan(m) - math.atan(other_m)))*180/math.pi < 10 and (abs(b - other_b) < 50):
-    #                 lines = np.delete(lines, j, 0)
-    #                 new_m = math.atan((math.tan(m) - math.tan(other_m))/2)
-    #                 new_b = (b + other_b) / 2
-    #                 left_y = new_b
-    #                 right_y = (new_m * width + new_b)
-    #                 top_x = int(-new_b/new_m)
-    #                 bottom_x = (height - new_b)/m
-    #                 if (left_y > 0 and left_y < height):
-    #                       print('case A')
-    #                       y1 = left_y
-    #                       x1 = 0
-        
-    #                       if (top_x > 0 and top_x < width):
-    #                             y2 = 0
-    #                             x2 = top_x
-    #                       elif (bottom_x > 0 and bottom_x < width):
-    #                             y2 = height
-    #                             x2 = bottom_x
-    #                       else:
-    #                             y2 = right_y
-    #                             x2 = width
-    #                 elif (top_x > 0 and top_x < width):
-    #                       print('case B')
-    #                       y1 = 0
-    #                       x1 = top_x
-
-    #                       if (bottom_x > 0 and bottom_x < width):
-    #                             y2 = height
-    #                             x2 = bottom_x
-    #                       else:
-    #                             y2 = right_y
-    #                             x2 = width
-    #                 else:
-    #                       print('case C')
-    #                       y1 = right_y
-    #                       x1 = width
-    #                       y2 = height
-    #                       x2 = bottom_x
-                    
-    #                 lines[i] = [x1,x2,y1,y2]  
-    #                 print('new line', lines[i])
-    #               # print('before', lines.shape)
-    #               # print('deleted line', lines[j])
-                          
-    #                   # print('after', lines.shape)
-    #             else:
-    #                   j += 1
-    #             # print('after deleting', lines.shape)
-    #       i += 1
-    #       # print('here')
-
-#trying to find the right most line
-# edge_y = m*1280 - m*x1 + y1
-# if edge_y < edge_y_min:
-#   edge_y_min = edge_y
-#   max_x1, max_x2, max_y1, max_y2 = x1, x2, y1, y2
-# cv2.line(original_frame,(x1,y1),(x2,y2),(255,0,0),4)
-    # max_x = 0
-    # for line in lines:
-    #       for x1,y1,x2,y2 in line:
-    #             if max(x1, x2) > max_x:
-    #                   max_x = max(x1,x2)
-    #                   max_line = line
-    #             cv2.line(original_frame,(x1,y1+int(height/2)),(x2,y2+int(height/2)),(255,0,0),4)
-    # # cv2.line(original_frame, (max_x1,max_y1),(max_x2,max_y2), (0,0,0), 7)
-    # for x1,y1,x2,y2 in max_line:
-    #       cv2.line(original_frame,(x1,y1+int(height/2)),(x2,y2+int(height/2)),(0,255,0),7)
-          
-    # gray_frame = cv2.cvtColor(frame[height-500:height,:], cv2.COLOR_BGR2GRAY)
-    # gray_frame = cv2.GaussianBlur(gray_frame, (5,5), 0)
-    # # cv2.imshow("grey", grey_frame)
-    # ret, thresh = cv2.threshold(gray_frame, 80, 90, cv2.THRESH_BINARY_INV)
-    # road_image = cv2.inRange(frame, (80, 80, 80), (90, 90, 90))
-    
-    # _, contours, _ = cv2.findContours(road_image, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    # blank_frame = np.full_like(frame, 0)
-    # for cnt in contours:
-    #     if cv2.contourArea(cnt) > 2500:
-    #         # black_frame = cv2.drawContours(frame, [cnt], 0, (0,255,0), 3)
-    #         cv2.fillPoly(blank_frame, pts=[cnt], color=(0,255,0))
-    # cv2.imshow("thresh", thresh)
+          line_cX = last_cX
+          line_cY = int(height/2)
 
     M = cv2.moments(road_frame)
     if M["m00"] != 0:
         road_cX = int(M["m10"] / M["m00"])
     else:
-        road_cX = int(width/2 -100)
-    cv2.circle(original_frame, (road_cX, int(height/2)), 30, (255,255,0), -1)
-    cv2.circle(original_frame,(cX,cY), 20, (0,255,255), -1)
+        road_cX = int(width/2)
+    
 
-    return original_frame, int((cX+2*road_cX)/3)
+    cv2.circle(original_frame, (red_cX, red_cY), 10, [0,0,0], -1)
+    cv2.circle(original_frame, (road_cX, int(height/2)), 30, (255,255,0), -1)
+    cv2.circle(original_frame,(line_cX,line_cY), 20, (0,255,255), -1)
+
+    return original_frame, int((line_cX+2*road_cX)/3), at_crosswalk, moving_pedestrian, at_intersection
 
 class image_converter:
 
   def __init__(self):
-    self.centroid_location_pub = rospy.Publisher("centroid_location", Float32)
-    self.last_location = 400
+    self.centroid_location_pub = rospy.Publisher("centroid_location", Float32, queue_size = 1)
+    self.at_crosswalk_pub = rospy.Publisher("at_crosswalk", Bool, queue_size = 1)
+    self.at_intersection_pub = rospy.Publisher("at_intersection", Bool, queue_size = 1)
+    self.moving_pedestrian_pub = rospy.Publisher("moving_pedestrian", Bool, queue_size = 1)
+    self.last_location = 540
+    self.last_frame = np.zeros((720,1280,3))
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("/R1/pi_camera/image_raw",Image,self.callback)
 
@@ -256,12 +231,17 @@ class image_converter:
     except CvBridgeError as e:
       print(e)
 
-    processed_image, location = process_frame(cv_image, self.last_location)
+    processed_image, location, at_crosswalk, moving_pedestrian, at_intersection = process_frame(np.copy(cv_image), self.last_location, self.last_frame)
     self.last_location = location
+    self.last_frame = cv_image
     cv2.imshow("Image window", processed_image)
+    # cv2.imshow('self last frame', self.last_frame)
     cv2.waitKey(1)
 
     self.centroid_location_pub.publish(location)
+    self.at_crosswalk_pub.publish(at_crosswalk)
+    self.moving_pedestrian_pub.publish(moving_pedestrian)
+    self.at_intersection_pub.publish(at_intersection)
 
 
 def main(args):

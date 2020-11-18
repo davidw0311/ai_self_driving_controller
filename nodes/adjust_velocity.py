@@ -6,11 +6,11 @@ import argparse
 import roslib
 import rospy
 import sys
+import time
 import numpy as np
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Bool
 
-import time
 WIDTH = 1280
 HEIGHT = 720
 
@@ -114,9 +114,18 @@ class velocity_control:
 
     def __init__(self):
         self.init_time = time.time()
+        self.moving_pedestrian = False
+        self.moving_pedestrian_last = False
+        self.last_time_at_crosswalk = 0
+        self.at_intersection = False
+        self.stop_at_crosswalk = False
         self.centroid_location = 0
         self.velocity_pub = rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1)
+      
         self.centroid_location_sub = rospy.Subscriber('/centroid_location', Float32, self.callback)
+        self.at_crosswalk_sub = rospy.Subscriber('/at_crosswalk', Bool, self.at_crosswalk_callback)
+        self.moving_pedestrian = rospy.Subscriber('/moving_pedestrian', Bool, self.moving_pedestrian_callback)
+        self.at_intersection_sub = rospy.Subscriber('/at_intersection', Bool, self.at_intersection_callback)
         self.pid_controller = PID(0,0,0,time.time())
         
     def get_velocity(self, centroid):
@@ -136,18 +145,18 @@ class velocity_control:
 
         scaling_factor = cv2.getTrackbarPos('scale factor', "PID Controller")
         pid_factor = self.pid_controller.output / scaling_factor
-        print("pid factor ", pid_factor)
+        # print("pid factor ", pid_factor)
         velocity = Twist()
+
         velocity.linear.x = driving_speed
         velocity.angular.z = turning_speed*pid_factor
         
         return velocity
     
 
-
     def callback(self, data):
         self.centroid_location = data.data
-        print('centroid', self.centroid_location)
+        # print('centroid', self.centroid_location)
         cv2.imshow("PID Controller", np.zeros((1,400,3), np.uint8))
         cv2.waitKey(3)
         cv2.createTrackbar('driving speed','PID Controller',0,100,nothing)   
@@ -159,19 +168,62 @@ class velocity_control:
         cv2.createTrackbar('scale factor','PID Controller',1000,5000,nothing)
         
         if (time.time() - self.init_time) < 2.0:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
-
-            cv2.setTrackbarPos('proportional', 'PID Controller', 0)
-            cv2.setTrackbarPos('derivative', 'PID Controller', 0)
-            cv2.setTrackbarPos('integral', 'PID Controller', 0)
+            cv2.setTrackbarPos('driving speed', 'PID Controller', 4)
+            cv2.setTrackbarPos('turning speed', 'PID Controller', 12)
+            cv2.setTrackbarPos('proportional', 'PID Controller', 12)
+            cv2.setTrackbarPos('derivative', 'PID Controller', 3)
+            cv2.setTrackbarPos('integral', 'PID Controller', 3)
             cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
+        give_a_boost = False
+        if not self.moving_pedestrian_last and self.moving_pedestrian:
+            self.stop_at_crosswalk = False
+            give_a_boost = True
+            # print('pedestrian just started moving!')
 
-        velocity = self.get_velocity(self.centroid_location)
-        print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
+        # print('stop at crosswalk ', self.stop_at_crosswalk)
+        if self.stop_at_crosswalk:
+            # print('stopped at crosswalk')
+            velocity = Twist()
+            velocity.linear.x = 0
+            velocity.angular.z = 0
+        else:
+            velocity = self.get_velocity(self.centroid_location)
+        
+        if self.at_intersection:
+            velocity.linear.x = 0
+            velocity.angular.z = -0.2
+            if time.time() - self.init_time < 10:
+                velocity.angular.z = 0.2
+        
+        if give_a_boost:
+            velocity.linear.x = velocity.linear.x * 1.2
+        # print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
+        # print('current time', time.time())
         self.velocity_pub.publish(velocity)
 
-    
+    def at_crosswalk_callback(self, data):
+        # print('at cross walk', data.data)
+        # print('last time at crosswalk', self.last_time_at_crosswalk)
+        if data.data == True:
+            # print('last time', self.last_time_at_crosswalk)
+            # print('current time', time.time())
+            # print('\n')
+            if time.time() - self.last_time_at_crosswalk > 10:
+                self.stop_at_crosswalk = True
+                self.last_time_at_crosswalk = time.time()
+            
+
+    def moving_pedestrian_callback(self, data):
+        if self.stop_at_crosswalk:
+            self.moving_pedestrian_last = self.moving_pedestrian
+            self.moving_pedestrian = data.data
+
+    def at_intersection_callback(self, data):
+        self.at_intersection = data.data
+
+
+
+
 def main(args):
     rospy.init_node('velocity_adjuster', anonymous = True)
     vc = velocity_control()
@@ -183,8 +235,8 @@ def main(args):
     
     cv2.destroyAllWindows()
     stop_vel = Twist()
-    stop_vel.linear.x = 0
-    stop_vel.angular.z = 0
+    stop_vel.linear.x = 0.0
+    stop_vel.angular.z = 0.0
     rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1).publish(stop_vel)
 
 if __name__ == '__main__':
