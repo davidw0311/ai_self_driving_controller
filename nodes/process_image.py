@@ -235,7 +235,7 @@ class image_converter:
     self.last_location = location
     self.last_frame = cv_image
     width, height = processed_image.shape[1], processed_image.shape[0]
-    processed_image_resized = cv2.resize(processed_image, (int(width/4), int(height/4)) , interpolation = cv2.INTER_AREA)
+    processed_image_resized = cv2.resize(processed_image, (int(width/2), int(height/2)) , interpolation = cv2.INTER_AREA)
     cv2.imshow("Image window", processed_image_resized)
     # cv2.imshow('self last frame', self.last_frame)
     cv2.waitKey(1)

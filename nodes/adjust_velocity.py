@@ -142,7 +142,6 @@ class velocity_control:
         self.pid_controller.setKd(cv2.getTrackbarPos('derivative', "PID Controller"))
         self.pid_controller.setKi(cv2.getTrackbarPos('integral', "PID Controller"))
         
-        
         error = centroid - WIDTH/2
         self.pid_controller.update(error, time.time())
 
@@ -161,20 +160,20 @@ class velocity_control:
         self.centroid_location = data.data
         # print('centroid', self.centroid_location)
         cv2.imshow("PID Controller", np.zeros((1,400,3), np.uint8))
-        cv2.waitKey(3)
+        cv2.waitKey(1)
+
         cv2.createTrackbar('driving speed','PID Controller',0,100,nothing)   
         cv2.createTrackbar('turning speed','PID Controller',0,100,nothing)
-        
         cv2.createTrackbar('proportional','PID Controller',0,100,nothing)
         cv2.createTrackbar('derivative','PID Controller',0,100,nothing)
         cv2.createTrackbar('integral','PID Controller',0,100,nothing)
         cv2.createTrackbar('scale factor','PID Controller',1000,5000,nothing)
         
         if (time.time() - self.init_time) < 2.0:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 4)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 12)
-            cv2.setTrackbarPos('proportional', 'PID Controller', 12)
-            cv2.setTrackbarPos('derivative', 'PID Controller', 3)
+            cv2.setTrackbarPos('driving speed', 'PID Controller', 13)
+            cv2.setTrackbarPos('turning speed', 'PID Controller', 20)
+            cv2.setTrackbarPos('proportional', 'PID Controller', 14)
+            cv2.setTrackbarPos('derivative', 'PID Controller', 8)
             cv2.setTrackbarPos('integral', 'PID Controller', 3)
             cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
         give_a_boost = False
