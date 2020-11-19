@@ -10,7 +10,7 @@ comp_time = 240                  # should be 4*60 seconds
 
 def reporter():
     pub = rospy.Publisher('/license_plate', String, queue_size=0)
-    start_pub = rospy.Publisher('/robot_state', String, queue_size=0)
+    start_pub = rospy.Publisher('/controller_state', String, queue_size=0)
     rospy.init_node('reporter', anonymous=True)
 
     start_timer_str = msg(0,'strt')

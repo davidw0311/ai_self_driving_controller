@@ -9,7 +9,7 @@ import sys
 import time
 import numpy as np
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Float32, Bool, String
 
 WIDTH = 1280
 HEIGHT = 720
@@ -120,12 +120,15 @@ class velocity_control:
         self.at_intersection = False
         self.stop_at_crosswalk = False
         self.centroid_location = 0
+        self.controller_state = ''
+        self.timer_started = False
         self.velocity_pub = rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1)
       
         self.centroid_location_sub = rospy.Subscriber('/centroid_location', Float32, self.callback)
         self.at_crosswalk_sub = rospy.Subscriber('/at_crosswalk', Bool, self.at_crosswalk_callback)
         self.moving_pedestrian = rospy.Subscriber('/moving_pedestrian', Bool, self.moving_pedestrian_callback)
         self.at_intersection_sub = rospy.Subscriber('/at_intersection', Bool, self.at_intersection_callback)
+        self.controller_state_sub = rospy.Subscriber('/controller_state', String, self.controller_state_callback)
         self.pid_controller = PID(0,0,0,time.time())
         
     def get_velocity(self, centroid):
@@ -196,10 +199,12 @@ class velocity_control:
                 velocity.angular.z = 0.2
         
         if give_a_boost:
-            velocity.linear.x = velocity.linear.x * 1.2
-        # print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
-        # print('current time', time.time())
-        self.velocity_pub.publish(velocity)
+            velocity.linear.x = velocity.linear.x * 1.3
+        
+        if self.timer_started:
+            # print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
+            # print('current time', time.time())
+            self.velocity_pub.publish(velocity)
 
     def at_crosswalk_callback(self, data):
         # print('at cross walk', data.data)
@@ -220,6 +225,11 @@ class velocity_control:
 
     def at_intersection_callback(self, data):
         self.at_intersection = data.data
+    
+    def controller_state_callback(self, data):
+        self.controller_state = data.data
+        if (data.data == 'timer_started'):
+            self.timer_started = True
 
 
 
@@ -237,7 +247,8 @@ def main(args):
     stop_vel = Twist()
     stop_vel.linear.x = 0.0
     stop_vel.angular.z = 0.0
-    rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1).publish(stop_vel)
+    stop_publisher = rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1)
+    stop_publisher.publish(stop_vel)
 
 if __name__ == '__main__':
     print('started adjust_velocity')
