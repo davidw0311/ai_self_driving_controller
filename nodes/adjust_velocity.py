@@ -110,12 +110,20 @@ class PID:
 def nothing(x):
     pass
 
+#pedestrial array length
+pal = 15
+damping_vel = Twist()
+damping_vel.linear.x = 0.12
+damping_vel.angular.z = 0
+
 class velocity_control:
 
     def __init__(self):
         self.init_time = time.time()
-        self.moving_pedestrian = False
-        self.moving_pedestrian_last = False
+        self.moving_pedestrian_array = []
+        for i in range(pal):
+            # stationary = False, moving = True
+            self.moving_pedestrian_array.append(False)
         self.last_time_at_crosswalk = 0
         self.at_intersection = False
         self.stop_at_crosswalk = False
@@ -158,6 +166,9 @@ class velocity_control:
 
     def callback(self, data):
         self.centroid_location = data.data
+        if time.time() - self.last_time_at_crosswalk > 15:
+            for i in range(pal):
+                self.moving_pedestrian_array[i] = False 
         # print('centroid', self.centroid_location)
         cv2.imshow("PID Controller", np.zeros((1,400,3), np.uint8))
         cv2.waitKey(1)
@@ -170,16 +181,22 @@ class velocity_control:
         cv2.createTrackbar('scale factor','PID Controller',1000,5000,nothing)
         
         if (time.time() - self.init_time) < 2.0:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 13)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 20)
+            # cv2.setTrackbarPos('driving speed', 'PID Controller', 18)
+            # cv2.setTrackbarPos('turning speed', 'PID Controller', 36)
+            cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
+            cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
             cv2.setTrackbarPos('proportional', 'PID Controller', 14)
-            cv2.setTrackbarPos('derivative', 'PID Controller', 8)
+            cv2.setTrackbarPos('derivative', 'PID Controller', 7)
             cv2.setTrackbarPos('integral', 'PID Controller', 3)
             cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
         give_a_boost = False
-        if not self.moving_pedestrian_last and self.moving_pedestrian:
+
+        # print('moving pedestrian array', self.moving_pedestrian_array)
+        # print('sum of first 3 elements', sum(self.moving_pedestrian_array[0:3]))
+        if self.stop_at_crosswalk and sum(self.moving_pedestrian_array[0:3]) == 0 and sum(self.moving_pedestrian_array) >= pal - 4:
             self.stop_at_crosswalk = False
             give_a_boost = True
+            # print('LETS GOOOOOO')
             # print('pedestrian just started moving!')
 
         # print('stop at crosswalk ', self.stop_at_crosswalk)
@@ -188,14 +205,17 @@ class velocity_control:
             velocity = Twist()
             velocity.linear.x = 0
             velocity.angular.z = 0
+            self.velocity_pub.publish(damping_vel)
         else:
             velocity = self.get_velocity(self.centroid_location)
         
         if self.at_intersection:
+            self.velocity_pub.publish(damping_vel)
+            self.velocity_pub.publish(damping_vel)
             velocity.linear.x = 0
-            velocity.angular.z = -0.2
-            if time.time() - self.init_time < 8:
-                velocity.angular.z = 0.2
+            velocity.angular.z = -0.8
+            if time.time() - self.init_time < 5:
+                velocity.angular.z = 0.8
         
         if give_a_boost:
             velocity.linear.x = velocity.linear.x * 1.3
@@ -212,15 +232,17 @@ class velocity_control:
             # print('last time', self.last_time_at_crosswalk)
             # print('current time', time.time())
             # print('\n')
-            if time.time() - self.last_time_at_crosswalk > 10:
+            if time.time() - self.last_time_at_crosswalk > 15:
                 self.stop_at_crosswalk = True
                 self.last_time_at_crosswalk = time.time()
             
 
     def moving_pedestrian_callback(self, data):
         if self.stop_at_crosswalk:
-            self.moving_pedestrian_last = self.moving_pedestrian
-            self.moving_pedestrian = data.data
+            for i in range(pal-2, -1, -1):
+                self.moving_pedestrian_array[i+1] = self.moving_pedestrian_array[i]
+                
+            self.moving_pedestrian_array[0] = data.data
 
     def at_intersection_callback(self, data):
         self.at_intersection = data.data
