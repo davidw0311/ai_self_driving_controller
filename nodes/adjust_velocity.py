@@ -113,7 +113,7 @@ def nothing(x):
 #pedestrial array length
 pal = 15
 damping_vel = Twist()
-damping_vel.linear.x = 0.12
+damping_vel.linear.x = 0.10
 damping_vel.angular.z = 0
 
 class velocity_control:
@@ -190,7 +190,7 @@ class velocity_control:
             cv2.setTrackbarPos('integral', 'PID Controller', 3)
             cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
         give_a_boost = False
-
+        rate = rospy.Rate(20)
         # print('moving pedestrian array', self.moving_pedestrian_array)
         # print('sum of first 3 elements', sum(self.moving_pedestrian_array[0:3]))
         if self.stop_at_crosswalk and sum(self.moving_pedestrian_array[0:3]) == 0 and sum(self.moving_pedestrian_array) >= pal - 4:
@@ -205,13 +205,15 @@ class velocity_control:
             velocity = Twist()
             velocity.linear.x = 0
             velocity.angular.z = 0
+
             self.velocity_pub.publish(damping_vel)
+
         else:
             velocity = self.get_velocity(self.centroid_location)
         
         if self.at_intersection:
             self.velocity_pub.publish(damping_vel)
-            self.velocity_pub.publish(damping_vel)
+
             velocity.linear.x = 0
             velocity.angular.z = -0.8
             if time.time() - self.init_time < 5:
