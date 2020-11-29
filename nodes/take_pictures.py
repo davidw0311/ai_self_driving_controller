@@ -29,4 +29,4 @@ class take_pictures:
         #cv2.imshow("Image window", processed_image)
         #cv2.waitKey(1)
 
-    self.centroid_location_pub.publish(location)
+    #self.centroid_location_pub.publish(location)

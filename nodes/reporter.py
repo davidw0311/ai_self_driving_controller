@@ -6,7 +6,7 @@ from std_msgs.msg import String
 team_ID = 'donuts'
 team_psd = 'enph353'
 license_plate_found = False
-comp_time = 240                  # should be 4*60 seconds
+comp_time = 30                  # should be 4*60 seconds
 
 def reporter():
     pub = rospy.Publisher('/license_plate', String, queue_size=0)
