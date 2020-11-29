@@ -15,8 +15,8 @@
           output="screen">
     </node>
     <node pkg="my_controller"
-          type="get_license_plate.py"
-          name="license_plate_reader"
+          type="decrypt_plate.py"
+          name="license_plate_decryption"
           output="screen">
     </node>
 

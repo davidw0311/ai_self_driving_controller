@@ -182,7 +182,7 @@ class velocity_control:
         
         if (time.time() - self.init_time) < 2.0:
             cv2.setTrackbarPos('driving speed', 'PID Controller', 15)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 36)
+            cv2.setTrackbarPos('turning speed', 'PID Controller', 32)
             # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
             # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
             cv2.setTrackbarPos('proportional', 'PID Controller', 14)

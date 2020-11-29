@@ -20,6 +20,8 @@ def get_random_string(length):
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
 
+generate_images = False
+
 grass_centroids = []
 for t in range(20):
     grass_centroids.append(0)
@@ -51,7 +53,7 @@ def process_frame(frame, last_cX, last_frame):
     license_mask = cv2.bitwise_or(license_mask, license_mask_other_gray)
     license_mask = cv2.erode(license_mask, np.ones((3, 3), np.uint8), iterations=1)
     license_mask = cv2.dilate(license_mask, np.ones((7, 7), np.uint8), iterations=1)
-    cv2.imshow('license_mask', license_mask)
+    # cv2.imshow('license_mask', license_mask)
 
 
     cropped_plate = None
@@ -105,11 +107,11 @@ def process_frame(frame, last_cX, last_frame):
             rect = cv2.minAreaRect(closest_contour)
             box = cv2.boxPoints(rect)
             box = np.int0(box)
-            
             # cv2.drawContours(blank, [biggest_car_contour], 0, (0,255,0), 3)
-            
             combined_contour = np.concatenate((biggest_car_contour, closest_contour), axis = 0)
+        
         else:
+            #sometimes the detection detect the whole sign as one contour
             combined_contour = biggest_car_contour
 
         rect = cv2.minAreaRect(combined_contour)
@@ -129,13 +131,15 @@ def process_frame(frame, last_cX, last_frame):
             
             M = cv2.moments(letters_of_plate)
             if (M['m00'] > 5):
-                random_name = get_random_string(10)
-                cv2.imshow('letters of plate', letters_of_plate)
+                
+                # cv2.imshow('letters of plate', letters_of_plate)
                 cv2.imshow('license plate', cropped_plate)
 
-                name = '/home/davidw0311/plate_images/' + random_name + '.jpg'
-                cv2.imwrite(name, cropped_plate)
-                print('wrote image to', name )
+                if generate_images:
+                    random_name = get_random_string(10)
+                    name = '/home/davidw0311/plate_images/' + random_name + '.jpg'
+                    cv2.imwrite(name, cropped_plate)
+                    print('wrote image to', name )
                 cv2.waitKey(1)
             else:
                 cropped_plate = None
