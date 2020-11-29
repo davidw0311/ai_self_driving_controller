@@ -12,6 +12,14 @@ import sys
 import roslib
 roslib.load_manifest('my_controller')
 
+import random
+import string
+
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    return result_str
+
 grass_centroids = []
 for t in range(20):
     grass_centroids.append(0)
@@ -49,7 +57,7 @@ def process_frame(frame, last_cX, last_frame):
     cropped_plate = None
 
     _, car_contours, _ = cv2.findContours(license_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    if car_contours is not None:
+    if len(car_contours) > 0:
         max_area = 0
         car_cX, car_cY = 0, 0
 
@@ -72,7 +80,6 @@ def process_frame(frame, last_cX, last_frame):
 
         height_of_box = max(abs(box[0][1] - box[1][1]), abs(box[0][1] - box[2][1]))
         width_of_box = max(abs(box[0][0] - box[1][0]), abs(box[0][0] - box[2][0]))
-
 
 
         close_contours=[]
@@ -98,11 +105,13 @@ def process_frame(frame, last_cX, last_frame):
             rect = cv2.minAreaRect(closest_contour)
             box = cv2.boxPoints(rect)
             box = np.int0(box)
-        
+            
+            # cv2.drawContours(blank, [biggest_car_contour], 0, (0,255,0), 3)
+            
+            combined_contour = np.concatenate((biggest_car_contour, closest_contour), axis = 0)
+        else:
+            combined_contour = biggest_car_contour
 
-        # cv2.drawContours(blank, [biggest_car_contour], 0, (0,255,0), 3)
-
-        combined_contour = np.concatenate((biggest_car_contour, closest_contour), axis = 0)
         rect = cv2.minAreaRect(combined_contour)
         box = cv2.boxPoints(rect)
         box = np.int0(box)
@@ -111,10 +120,28 @@ def process_frame(frame, last_cX, last_frame):
         top_left_y = min([y1,y2,y3,y4])
         bot_right_x = max([x1,x2,x3,x4])
         bot_right_y = max([y1,y2,y3,y4])
-        license_plate = original_frame[top_left_y:bot_right_y, top_left_x:bot_right_x]
-  
-        cv2.imshow('license plate', license_plate)
-        cv2.waitKey(1)
+        
+        cropped_plate = original_frame[top_left_y:bot_right_y, top_left_x:bot_right_x]
+        if cropped_plate.shape[0] > 10 and cropped_plate.shape[1] > 10:
+            cropped_plate = cv2.resize(cropped_plate, (300,400), interpolation=cv2.INTER_AREA)
+            
+            letters_of_plate = cv2.inRange(cropped_plate[100:300,20:280], (-1,-1,-1),(10,10,10))
+            
+            M = cv2.moments(letters_of_plate)
+            if (M['m00'] > 5):
+                random_name = get_random_string(10)
+                cv2.imshow('letters of plate', letters_of_plate)
+                cv2.imshow('license plate', cropped_plate)
+
+                name = '/home/davidw0311/plate_images/' + random_name + '.jpg'
+                cv2.imwrite(name, cropped_plate)
+                print('wrote image to', name )
+                cv2.waitKey(1)
+            else:
+                cropped_plate = None
+
+        else:
+            cropped_plate = None
     
     # detect the stop_walk
     red_frame = cv2.inRange(original_frame, (0, 0, 245), (10, 10, 255))
