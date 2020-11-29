@@ -23,13 +23,18 @@ from keras.callbacks import EarlyStopping
 PATH = "/home/sylvia/ros_ws/src/my_controller/cnn_training/characters_pictures/"
 folders_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+aug_data_path = "/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/"
 imgset = []
 for i in range(36):
     folder_path = PATH + str(folders_str[i]) + '/'
     files = os.listdir(folder_path)
     pair_list = []
     for file in files:
-      exact_path = folder_path + '/' + file
+      exact_path = folder_path +  '/' + file
+      pair_list.append([np.array(Image.open(exact_path)), i])
+    aug_folder_path = aug_data_path + str(folders_str[i]) + '/'
+    for file in os.listdir(aug_folder_path):
+      exact_path = aug_folder_path + file
       pair_list.append([np.array(Image.open(exact_path)), i])
     imgset.append(np.array(pair_list))
     # print("Loaded {:} images from folder:\n{}".format(imgset[i].shape[0], folder_path))
@@ -37,7 +42,7 @@ for i in range(36):
 my_tuple = tuple(imgset[i] for i in range(36))
 all_dataset = np.concatenate(my_tuple, axis=0)
 np.random.shuffle(all_dataset)
-#print(np.shape(all_dataset))
+print(np.shape(all_dataset))
 
 ## Generate X and Y datasets
 X_dataset_orig = np.array([data[0] for data in all_dataset[:]])
@@ -166,4 +171,5 @@ print(predictions)
 actual = [np.argmax(p) for p in val_target]
 print(actual)
 
-conv_model.save('alphanumeric_detector_model')
+# conv_model.save('alphanumeric_detector_model') # this one is trained on unaugmented data
+conv_model.save('alphanumeric_detector_model_v2') # trained on augmented data
