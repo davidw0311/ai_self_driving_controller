@@ -6,7 +6,7 @@ import cv2
 
 my_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 PATH = '/home/sylvia/ros_ws/src/my_controller/cnn_training/'
-model_path = PATH + 'alphanumeric_detector_model'
+model_path = PATH + 'alphanumeric_detector_model_v2'
 
 conv_model = models.load_model(model_path, compile=True)
 my_dim_rev = (105, 150)
@@ -24,17 +24,17 @@ def cut(img):
     # ID x(165:285) y(150:245)
     ID = img[150:245, 165:285]
     ID = cv2.resize(ID,my_dim_rev)
-    # A1 x(30:85) y(290:330) 
-    A1 = img[290:330, 30:85]
+    # A1 x(20:76) y(280:330) 
+    A1 = img[280:330, 20:76]
     A1 = cv2.resize(A1,my_dim_rev)
-    # A2 x(85:135) y(290:330)
-    A2 = img[290:330, 85:135]
+    # A2 x(76:135) y(280:330)
+    A2 = img[280:330, 76:135]
     A2 = cv2.resize(A2,my_dim_rev)
-    # N1 x(180:230) y(280:325)
-    N1 = img[280:325, 180:230]
+    # N1 x(180:227) y(280:330)
+    N1 = img[280:330, 180:227]
     N1 = cv2.resize(N1,my_dim_rev)
-    # N2 x(230:275) y(280:325)
-    N2 = img[280:325, 230:275]
+    # N2 x(227:280) y(280:330)
+    N2 = img[280:330, 227:280]
     N2 = cv2.resize(N2,my_dim_rev)
     return P
     # return P, ID, A1, A2, N1, N2
@@ -44,6 +44,8 @@ def arr_to_char(one_hot):
     return my_str[val_index]
 
 img_to_pred = np.expand_dims(cut(img), axis=0)
+plt.imshow(cut(img))
+plt.show()
 y_predict = conv_model.predict(img_to_pred)[0]
 val = arr_to_char(y_predict)
 print(val)

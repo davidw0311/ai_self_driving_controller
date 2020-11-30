@@ -18,6 +18,9 @@ from keras.utils import plot_model
 from keras import backend
 from keras.callbacks import EarlyStopping 
 
+import seaborn as sn
+import pandas as pd
+from sklearn.metrics import confusion_matrix
 
 
 PATH = "/home/sylvia/ros_ws/src/my_controller/cnn_training/characters_pictures/"
@@ -170,6 +173,16 @@ print(predictions)
 
 actual = [np.argmax(p) for p in val_target]
 print(actual)
+
+cm = confusion_matrix(actual, predictions)
+
+LABELS = folders_str
+df_cm = pd.DataFrame(cm, index = [i for i in LABELS], columns = [i for i in LABELS])
+
+plt.figure(figsize=(20,14))
+sn.set(font_scale=1.4) # for label size
+sn.heatmap(df_cm, annot=True, annot_kws={"size": 10}) # font size
+plt.show()
 
 # conv_model.save('alphanumeric_detector_model') # this one is trained on unaugmented data
 conv_model.save('alphanumeric_detector_model_v2') # trained on augmented data

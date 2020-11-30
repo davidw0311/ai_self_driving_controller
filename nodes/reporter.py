@@ -3,10 +3,22 @@
 import rospy
 from std_msgs.msg import String
 
+from keras import models
+import numpy as np
+from PIL import Image
+from matplotlib import pyplot as plt
+import cv2
+
+my_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+PATH = '/home/sylvia/ros_ws/src/my_controller/cnn_training/'
+model_path = PATH + 'alphanumeric_detector_model'
+
+conv_model = models.load_model(model_path, compile=True)
+
 team_ID = 'donuts'
 team_psd = 'enph353'
 license_plate_found = False
-comp_time = 30                  # should be 4*60 seconds
+comp_time = 4*60                  # should be 4*60 seconds
 
 def reporter():
     pub = rospy.Publisher('/license_plate', String, queue_size=0)
