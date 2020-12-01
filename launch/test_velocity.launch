@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="my_controller"
+          type="test_velocity.py"
+          name="testing_robot_velocity"
+          output="screen">
+    </node>
+</launch>

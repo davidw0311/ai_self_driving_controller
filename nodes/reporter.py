@@ -21,9 +21,9 @@ license_plate_found = False
 comp_time = 4*60                  # should be 4*60 seconds
 
 def reporter():
-    pub = rospy.Publisher('/license_plate', String, queue_size=0)
+    pub = rospy.Publisher('/license_plate', String, queue_size=1)
     img_sub = rospy.Subscriber('/')
-    start_pub = rospy.Publisher('/controller_state', String, queue_size=0)
+    start_pub = rospy.Publisher('/controller_state', String, queue_size=1)
     rospy.init_node('reporter', anonymous=True)
 
     start_timer_str = msg(0,'strt')
@@ -46,7 +46,7 @@ def reporter():
             something = 0
 
         curr_time = rospy.get_time()-start_time
-        if curr_time.is_integer() and curr_time != prev_time:
+        if curr_time%10 ==0 and curr_time != prev_time:
             disp_time_str = str(curr_time) + ' seconds since competition timer started'
             print(disp_time_str)
             prev_time = curr_time
