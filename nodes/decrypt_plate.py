@@ -75,16 +75,16 @@ class plate_decrypter:
             N1_val, N1_conf = self.prediction(N1) #... and these are numbers
             N2_val, N2_conf = self.prediction(N2)
 
-            total_conf = (ID_conf+A1_conf+A2_conf+N1_conf+N2_conf)/5.0
-
-            plate_str = str(ID_val) + str(A1_val) + str(A2_val) + str(N1_val) + str(N2_val)
-
-            pub_str = plate_str + str(total_conf)
-            
-            ## PUBLISH PLATE
-            ## message is in format: #AA##confidence 
-            rospy.loginfo("License plate read: " + pub_str)
-            self.license_value_pub.publish(pub_str)
+            if ID_val.isdigit() and A1_val.isalpha() and A2_val.isalpha() 
+                                and N1_val.isdigit() and N2_val.isdigit():
+                ## PUBLISH PLATE
+                ## message is in format: #AA##confidence 
+                total_conf = (ID_conf+A1_conf+A2_conf+N1_conf+N2_conf)/5.0
+                plate_str = str(ID_val) + str(A1_val) + str(A2_val) + str(N1_val) + str(N2_val)
+                pub_str = plate_str + str(total_conf)
+                
+                rospy.loginfo("License plate read: " + pub_str)
+                self.license_value_pub.publish(pub_str)
 
             # cv2.imshow("License plate read by neural net", cropped_plate)
             # cv2.imshow('self last frame', self.last_frame)
@@ -92,7 +92,7 @@ class plate_decrypter:
 
 
 def main(args):
-    rospy.init_node('plate_decrypter', anonymous=True)
+    rospy.init_node('plate_decrypter', anonymous=True)   
     pd = plate_decrypter()
 
     try:
