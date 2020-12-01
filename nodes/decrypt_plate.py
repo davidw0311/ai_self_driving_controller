@@ -63,7 +63,7 @@ class plate_decrypter:
         except CvBridgeError as e:
             print(e)
 
-        cropped_plate = np.expand_dims()
+        cropped_plate = np.expand_dims(cropped_plate, axis=0)
         P, ID, A1, A2, N1, N2 = cut(cropped_plate)
 
         P_val, P_conf = self.prediction(P, P=True)
@@ -75,8 +75,7 @@ class plate_decrypter:
             N1_val, N1_conf = self.prediction(N1) #... and these are numbers
             N2_val, N2_conf = self.prediction(N2)
 
-            if ID_val.isdigit() and A1_val.isalpha() and A2_val.isalpha() 
-                                and N1_val.isdigit() and N2_val.isdigit():
+            if ID_val.isdigit() and A1_val.isalpha() and A2_val.isalpha() and N1_val.isdigit() and N2_val.isdigit():
                 ## PUBLISH PLATE
                 ## message is in format: #AA##confidence 
                 total_conf = (ID_conf+A1_conf+A2_conf+N1_conf+N2_conf)/5.0
