@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 import cv2
 
 my_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-PATH = '/home/sylvia/ros_ws/src/my_controller/cnn_training/'
+PATH = '/home/davidw0311/ros_ws/src/my_controller/cnn_training/'
 model_path = PATH + 'alphanumeric_detector_model'
 
 conv_model = models.load_model(model_path, compile=True)
@@ -43,8 +43,12 @@ def arr_to_char(one_hot):
     val_index = np.argmax(one_hot)
     return my_str[val_index]
 
+cv2.imshow('img',img)
+
 img_to_pred = np.expand_dims(cut(img), axis=0)
+cv2.imshow('to predict', img_to_pred[0])
 y_predict = conv_model.predict(img_to_pred)[0]
 val = arr_to_char(y_predict)
+cv2.waitKey(0)
 print(val)
 

@@ -19,11 +19,10 @@ from keras import backend
 from keras.callbacks import EarlyStopping 
 
 
-
-PATH = "/home/sylvia/ros_ws/src/my_controller/cnn_training/characters_pictures/"
+PATH = "/home/davidw0311/ros_ws/src/my_controller/cnn_training/characters_pictures/"
 folders_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-aug_data_path = "/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/"
+aug_data_path = "/home/davidw0311/ros_ws/src/my_controller/cnn_training/other_aug_data/"
 imgset = []
 for i in range(36):
     folder_path = PATH + str(folders_str[i]) + '/'
@@ -172,4 +171,4 @@ actual = [np.argmax(p) for p in val_target]
 print(actual)
 
 # conv_model.save('alphanumeric_detector_model') # this one is trained on unaugmented data
-conv_model.save('alphanumeric_detector_model_v2') # trained on augmented data
+conv_model.save('alphanumeric_detector_model_v3') # trained on augmented data

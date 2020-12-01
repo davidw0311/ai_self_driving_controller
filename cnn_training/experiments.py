@@ -5,11 +5,11 @@ import os
 import cv2
 
 my_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-PATH = '/home/sylvia/ros_ws/src/my_controller/cnn_training/temp_test_photos/good/'
+PATH = '/home/davidw0311/ros_ws/src/my_controller/cnn_training/temp_test_photos/good/'
 my_dim_reversed = (105, 150)
 
 def good_images_overlay():
-    avg_img = np.array(Image.open(PATH + 'good.jpg'))
+    img = cv2.imread(PATH + 'good.jpg')
     files = os.listdir(PATH)
     for file in files:
         img = np.array(Image.open(PATH + file))
@@ -32,7 +32,9 @@ def cut(img):
     # N2 x(230:275) y(280:325)
     return P
 
-img = np.array(Image.open(PATH + 'good.jpg'))
+# img = np.array(Image.open(PATH + 'good.jpg'))
+
+img = cv2.imread(PATH + 'good.jpg')
 P = cut(img)
 print(np.shape(P))
 P_resized = cv2.resize(P,my_dim_reversed)
@@ -41,4 +43,5 @@ plt.imshow(P)
 plt.show()
 plt.imshow(P_resized)
 plt.show()
+
 
