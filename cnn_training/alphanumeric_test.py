@@ -47,6 +47,6 @@ img_to_pred = np.expand_dims(cut(img), axis=0)
 plt.imshow(cut(img))
 plt.show()
 y_predict = conv_model.predict(img_to_pred)[0]
+# print(y_predict)
 val = arr_to_char(y_predict)
 print(val)
-

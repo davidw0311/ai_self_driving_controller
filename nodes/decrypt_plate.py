@@ -45,39 +45,8 @@ class plate_decrypter:
     def __init__(self):
         self.conv_model = models.load_model(model_path, compile=True)
         self.bridge = CvBridge()
-        self.cropped_plate_sub = rospy.Subscriber("/cropped_plate", Image, self.callback)
         self.license_value_pub = rospy.Publisher('/plate_value', String, queue_size=1)
-
-    def callback(self, data):
-        try:
-            cropped_plate = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        except CvBridgeError as e:
-            print(e)
-
-        cropped_plate = np.expand_dims()
-        P, ID, A1, A2, N1, N2 = cut(cropped_plate)
-
-        P_val, P_conf = self.prediction(P)
-
-        if P_val == 'P' and P_conf > 0.9:
-            ID_val, ID_conf = self.prediction(ID)
-            A1_val, A1_conf = self.prediction(A1)
-            A2_val, A2_conf = self.prediction(A2)
-            N1_val, N1_conf = self.prediction(N1)
-            N2_val, N2_conf = self.prediction(N2)
-
-            total_conf = (ID_conf+A1_conf+A2_conf+N1_conf+N2_conf)/5.0
-
-            plate_str = str(ID_val) + str(A1_val) + str(A2_val) + str(N1_val) + str(N2_val)
-
-            pub_str = plate_str + str(total_conf)
-
-            rospy.loginfo("License plate read: " + pub_str)
-            self.license_value_pub.publish(pub_str)
-
-            # cv2.imshow("License plate read by neural net", cropped_plate)
-            # cv2.imshow('self last frame', self.last_frame)
-            # cv2.waitKey(1)
+        self.cropped_plate_sub = rospy.Subscriber("/cropped_plate", Image, self.callback)
 
 
     def prediction(self, img, P=False):
@@ -91,6 +60,40 @@ class plate_decrypter:
             P_conf = y_predict[15]
             return value, P_conf
         return value, confidence
+
+
+    def callback(self, data):
+        try:
+            cropped_plate = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+
+        cropped_plate = np.expand_dims()
+        P, ID, A1, A2, N1, N2 = cut(cropped_plate)
+
+        P_val, P_conf = self.prediction(P, P=True)
+
+        if P_val == 'P' and P_conf > 0.9:
+            ID_val, ID_conf = self.prediction(ID)
+            A1_val, A1_conf = self.prediction(A1) #also check that these are letters...
+            A2_val, A2_conf = self.prediction(A2)
+            N1_val, N1_conf = self.prediction(N1) #... and these are numbers
+            N2_val, N2_conf = self.prediction(N2)
+
+            total_conf = (ID_conf+A1_conf+A2_conf+N1_conf+N2_conf)/5.0
+
+            plate_str = str(ID_val) + str(A1_val) + str(A2_val) + str(N1_val) + str(N2_val)
+
+            pub_str = plate_str + str(total_conf)
+            
+            ## PUBLISH PLATE
+            ## message is in format: #AA##confidence 
+            rospy.loginfo("License plate read: " + pub_str)
+            self.license_value_pub.publish(pub_str)
+
+            # cv2.imshow("License plate read by neural net", cropped_plate)
+            # cv2.imshow('self last frame', self.last_frame)
+            # cv2.waitKey(1)
 
 
 def main(args):

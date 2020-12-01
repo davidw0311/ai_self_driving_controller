@@ -114,15 +114,17 @@ def generate_dev_set():
 
 #delete_files(aug_data_path)
 
-im = np.array(Image.open(
-    '/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/1/1_0_1338.png'))
-#im = cv2.imread('/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/1/1_0_59.png')
-im = cv2.cvtColor(im, cv2.COLOR_RGB2HSV)
-im[:,:,2] = 80 # changes the V value (between 0, 255)
-im = cv2.cvtColor(im, cv2.COLOR_HSV2RGB)
-img = np.array(im)
-#cv2.imshow('img', im)
+# im = np.array(Image.open(
+#     '/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/1/1_0_1338.png'))
+# #im = cv2.imread('/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/1/1_0_59.png')
+# im = cv2.cvtColor(im, cv2.COLOR_RGB2HSV)
+# im[:,:,2] = 80 # changes the V value (between 0, 255)
+# im = cv2.cvtColor(im, cv2.COLOR_HSV2RGB)
+# img = np.array(im)
+# #cv2.imshow('img', im)
 
-# print(img)
-plt.imshow(img)
-plt.show()
+# # print(img)
+# plt.imshow(img)
+# plt.show()
+
+print(my_str[15]) # index of P is 15

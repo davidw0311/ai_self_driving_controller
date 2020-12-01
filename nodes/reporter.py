@@ -3,65 +3,84 @@
 import rospy
 from std_msgs.msg import String
 
-from keras import models
 import numpy as np
-from PIL import Image
 from matplotlib import pyplot as plt
-import cv2
-
-my_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-PATH = '/home/sylvia/ros_ws/src/my_controller/cnn_training/'
-model_path = PATH + 'alphanumeric_detector_model'
-
-conv_model = models.load_model(model_path, compile=True)
 
 team_ID = 'donuts'
 team_psd = 'enph353'
-license_plate_found = False
 comp_time = 4*60                  # should be 4*60 seconds
 
-def reporter():
-    pub = rospy.Publisher('/license_plate', String, queue_size=1)
-    start_pub = rospy.Publisher('/controller_state', String, queue_size=1)
-    rospy.init_node('reporter', anonymous=True)
-
-    start_timer_str = msg(0,'strt')
-    stop_timer_str = msg(-1,'stop')
-
-    rospy.sleep(1)
-    r = rospy.Rate(10)                  # 10 Hz
-
-    rospy.loginfo(start_timer_str)
-    pub.publish(start_timer_str)
-    start_pub.publish('timer_started')
-    start_time = rospy.get_time()
-
-    prev_time = 0
-    while (not rospy.is_shutdown()) and (rospy.get_time()-start_time) < comp_time:
-        if license_plate_found:
-            # license_plate_str = msg(loc, id)   # replace loc and id
-            # rospy.loginf(license_plate_str)
-            # pub.publish(license_plate_str)
-            something = 0
-
-        curr_time = rospy.get_time()-start_time
-        if curr_time%10 ==0 and curr_time != prev_time:
-            disp_time_str = str(curr_time) + ' seconds since competition timer started'
-            print(disp_time_str)
-            prev_time = curr_time
-        r.sleep()
+class reporter:
     
-    rospy.loginfo(stop_timer_str)
-    pub.publish(stop_timer_str)
+    def __init__(self):
+        self.pub = rospy.Publisher('/license_plate', String, queue_size=1)
+        self.start_pub = rospy.Publisher('/controller_state', String, queue_size=1)
+
+        self.plates = {
+            1: 0,
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 0,
+            6: 0,
+            7: 0,
+            8: 0
+        }
+
+        self.start_timer_str = self.msg(0,'strt')
+        self.stop_timer_str = self.msg(-1,'stop')
+
+        rospy.sleep(1)
+        rospy.loginfo(start_timer_str)
+        pub.publish(start_timer_str)
+        start_pub.publish('timer_started')
+        self.start_time = rospy.get_time()
+
+        self.plate_val_sub = rospy.Subscriber('/plate_value', String, callback)
 
 
-def msg(lp_loc, lp_id):
-    ret_str = team_ID + ',' + team_psd + ',' + str(lp_loc) + ',' + str(lp_id)
-    return ret_str
+    def check_end(self, time):
+        if (time - self.start_time) >= comp_time:
+            rospy.loginfo(self.stop_timer_str)
+            self.pub.publish(self.stop_timer_str)
+        if not (self.plates[i] == 0 for i in list(self.plates)):
+            rospy.loginfo(self.stop_timer_str)
+            self.pub.publish(self.stop_timer_str)
+        
+    
+    def msg(self, lp_loc, lp_id):
+        ret_str = team_ID + ',' + team_psd + ',' + str(lp_loc) + ',' + str(lp_id)
+        return ret_str
+    
+
+    def callback(self, data):
+        ## Format: #AA##confidence
+        data_str = data.data
+        loc = int(data_str[0])
+        plate_id = data_str[1:5]
+        conf = float(data_str[5:])
+
+        if loc == 7 and plates[1]==0: # this plate is probably at location 1
+            loc = 1
+
+        if conf > plates[loc]:
+            license_plate_str = msg(loc, plate_id)   # replace loc and id
+            rospy.loginf(license_plate_str)
+            self.pub.publish(license_plate_str)
+        
+        self.check_end(rospy.get_time())
 
 
-if __name__=='__main__':
+def main(args):
+    rospy.init_node('reporter', anonymous=True)
+    rep = reporter()
+
     try:
-        reporter()
-    except rospy.ROSInterruptException:
-        pass
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
+    cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main(sys.argv)
