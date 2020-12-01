@@ -1,2 +1,5 @@
 *.jpg
 *.png
+detector_model_v3
+detector_model_v5_7epoch
+detector_model_v6*

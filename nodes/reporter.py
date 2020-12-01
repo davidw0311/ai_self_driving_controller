@@ -57,18 +57,25 @@ class reporter:
     def callback(self, data):
         ## Format: #AA##confidence
         data_str = data.data
-        loc = int(data_str[0])
-        plate_id = data_str[1:5]
-        conf = float(data_str[5:])
+        if data_str != '':
+            loc = int(data_str[0])
+            plate_id = data_str[1:5]
+            conf = float(data_str[5:])
 
-        if loc == 7 and plates[1]==0: # this plate is probably at location 1
-            loc = 1
+            if loc == 7 and self.plates[1]==0: # this plate is probably at location 1
+                loc = 1
+            
+            if loc > 8:
+                return
 
-        if conf > plates[loc]:
-            license_plate_str = msg(loc, plate_id)   # replace loc and id
-            rospy.loginf(license_plate_str)
-            self.pub.publish(license_plate_str)
-        
+            if conf > self.plates[loc]:
+                self.plates[loc] = conf
+                license_plate_str = self.msg(loc, plate_id)   # replace loc and id
+                # rospy.loginfo(license_plate_str)
+                self.pub.publish(license_plate_str)
+            
+            print(str(loc)+plate_id)
+            
         self.check_end(rospy.get_time())
 
 
