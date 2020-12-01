@@ -6,13 +6,8 @@ roslib.load_manifest('my_controller')
 from sensor_msgs.msg import Image
 from std_msgs.msg import String, Float32, Bool
 
-from __future__ import division
-from __future__ import print_function
-
 import sys
 import random
-import string
-import math
 
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError

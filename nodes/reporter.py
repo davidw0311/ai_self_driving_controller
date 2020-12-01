@@ -3,6 +3,7 @@
 import rospy
 from std_msgs.msg import String
 
+import sys
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -31,12 +32,12 @@ class reporter:
         self.stop_timer_str = self.msg(-1,'stop')
 
         rospy.sleep(1)
-        rospy.loginfo(start_timer_str)
-        pub.publish(start_timer_str)
-        start_pub.publish('timer_started')
+        rospy.loginfo(self.start_timer_str)
+        self.pub.publish(self.start_timer_str)
+        self.start_pub.publish('timer_started')
         self.start_time = rospy.get_time()
 
-        self.plate_val_sub = rospy.Subscriber('/plate_value', String, callback)
+        self.plate_val_sub = rospy.Subscriber('/plate_value', String, self.callback)
 
 
     def check_end(self, time):
