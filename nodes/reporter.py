@@ -22,7 +22,6 @@ comp_time = 4*60                  # should be 4*60 seconds
 
 def reporter():
     pub = rospy.Publisher('/license_plate', String, queue_size=1)
-    img_sub = rospy.Subscriber('/')
     start_pub = rospy.Publisher('/controller_state', String, queue_size=1)
     rospy.init_node('reporter', anonymous=True)
 
