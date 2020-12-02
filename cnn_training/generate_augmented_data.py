@@ -91,4 +91,4 @@ for folder in os.listdir('/home/davidw0311/ros_ws/src/my_controller/cnn_training
     for image in os.listdir(path):
         img = Image.open(path + '/'+ image)
         name = image[0]
-        save_augmented_photos(img, name, 600/num_imgs)  
+        save_augmented_photos(img, name, int(1200/num_imgs))  

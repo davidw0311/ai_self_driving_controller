@@ -79,8 +79,8 @@ conv_model.compile(loss='categorical_crossentropy',
 history = conv_model.fit(
     train_dataset,
     train_target,
-    batch_size=16,
-    epochs=7,
+    batch_size=32,
+    epochs=8,
     # We pass some validation for
     # monitoring validation loss and metrics
     # at the end of each epoch  
@@ -88,7 +88,7 @@ history = conv_model.fit(
     shuffle=True
 )
 
-conv_model.save('detector_model_v6_7epoch_lenet')
+conv_model.save('detector_model_v7_8epoch_lenet')
 
 print(history.history.keys())
 plt.plot(history.history['loss'])

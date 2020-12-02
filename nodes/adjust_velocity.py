@@ -119,7 +119,8 @@ damping_vel.angular.z = 0
 class velocity_control:
 
     def __init__(self):
-        self.init_time = time.time()
+        self.init_time = None
+        self.enter_time = None
         self.moving_pedestrian_array = []
         for i in range(pal):
             # stationary = False, moving = True
@@ -127,19 +128,21 @@ class velocity_control:
         self.last_time_at_crosswalk = 0
         self.at_intersection = False
         self.stop_at_crosswalk = False
+        self.go_inside = False
+        self.inside = False
         self.centroid_location = 0
         self.controller_state = ''
         self.timer_started = False
         self.velocity_pub = rospy.Publisher('/R1/cmd_vel', Twist, queue_size=1)
-      
+        self.controller_state_sub = rospy.Subscriber('/controller_state', String, self.controller_state_callback)
         self.centroid_location_sub = rospy.Subscriber('/centroid_location', Float32, self.callback)
         self.at_crosswalk_sub = rospy.Subscriber('/at_crosswalk', Bool, self.at_crosswalk_callback)
         self.moving_pedestrian = rospy.Subscriber('/moving_pedestrian', Bool, self.moving_pedestrian_callback)
         self.at_intersection_sub = rospy.Subscriber('/at_intersection', Bool, self.at_intersection_callback)
-        self.controller_state_sub = rospy.Subscriber('/controller_state', String, self.controller_state_callback)
+        
         self.pid_controller = PID(0,0,0,time.time())
         
-    def get_velocity(self, centroid):
+    def get_velocity(self, centroid, inside):
 
         # turning_factor = pid_control(centroid)
         turning_factor = 1
@@ -180,15 +183,15 @@ class velocity_control:
         cv2.createTrackbar('integral','PID Controller',0,100,nothing)
         cv2.createTrackbar('scale factor','PID Controller',1000,5000,nothing)
         
-        if (time.time() - self.init_time) < 2.0:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 15)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 32)
-            # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
-            # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
-            cv2.setTrackbarPos('proportional', 'PID Controller', 14)
-            cv2.setTrackbarPos('derivative', 'PID Controller', 7)
-            cv2.setTrackbarPos('integral', 'PID Controller', 3)
-            cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
+        # if (time.time() - self.init_time) < 2.0:
+        cv2.setTrackbarPos('driving speed', 'PID Controller', 12)
+        cv2.setTrackbarPos('turning speed', 'PID Controller', 28)
+        # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
+        # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
+        cv2.setTrackbarPos('proportional', 'PID Controller', 14)
+        cv2.setTrackbarPos('derivative', 'PID Controller', 7)
+        cv2.setTrackbarPos('integral', 'PID Controller', 3)
+        cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
         give_a_boost = False
         rate = rospy.Rate(20)
         # print('moving pedestrian array', self.moving_pedestrian_array)
@@ -209,22 +212,36 @@ class velocity_control:
             self.velocity_pub.publish(damping_vel)
 
         else:
-            velocity = self.get_velocity(self.centroid_location)
+            velocity = self.get_velocity(self.centroid_location, self.inside)
         
         if self.at_intersection:
             self.velocity_pub.publish(damping_vel)
 
             velocity.linear.x = 0
             velocity.angular.z = -0.8
-            if time.time() - self.init_time < 5:
-                velocity.angular.z = 0.8
+
+            if self.go_inside and not self.inside:
+                if self.enter_time is None:
+                    self.enter_time = time.time()
+                self.inside = True
+            
+            if self.inside:
+                velocity.angular.z = -0.8
+                if time.time() - self.enter_time < 10:
+                    velocity.angular.z = 0.8
+            
+            if self.init_time is not None:
+                if time.time() - self.init_time < 5:
+                    velocity.angular.z = 0.8
         
         if give_a_boost:
             velocity.linear.x = velocity.linear.x * 1.3
         
+
         if self.timer_started:
-            # print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
-            # print('current time', time.time())
+            print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
+            print('current time', time.time())
+ 
             self.velocity_pub.publish(velocity)
 
     def at_crosswalk_callback(self, data):
@@ -251,8 +268,14 @@ class velocity_control:
     
     def controller_state_callback(self, data):
         self.controller_state = data.data
+        print(data.data)
         if (data.data == 'timer_started'):
             self.timer_started = True
+            if self.init_time is None:
+                self.init_time = time.time()
+        
+        if (data.data == 'go_inside') or self.go_inside:
+            self.go_inside = True
 
 
 

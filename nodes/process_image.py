@@ -178,7 +178,7 @@ def process_frame(frame, last_cX, last_frame):
       #     print('mean squared error', mse)
 
     box_frame = cv2.inRange(original_frame, (90, 0, 0), (130, 30, 30))
-    box_frame = cv2.dilate(box_frame, dilation_kernel, iterations=1)
+    box_frame = cv2.dilate(box_frame, dilation_kernel, iterations=2)
 
 #     cv2.imshow('box frame', box_frame)
 #     cv2.imshow('expanded box', expanded_box_frame)
@@ -349,11 +349,18 @@ class image_converter:
             "moving_pedestrian", Bool, queue_size=1)
         self.cropped_plate_pub = rospy.Publisher(
             "cropped_plate", Image, queue_size=1)
+        self.timer_started = False
         self.last_location = 540
         self.last_frame = np.zeros((720, 1280, 3))
         self.bridge = CvBridge()
+        self.controller_state_sub = rospy.Subscriber('/controller_state', String, self.controller_state_callback)
         self.image_sub = rospy.Subscriber(
             "/R1/pi_camera/image_raw", Image, self.callback)
+    
+    def controller_state_callback(self, data):
+        self.controller_state = data.data
+        if (data.data == 'timer_started'):
+            self.timer_started = True
 
     def callback(self, data):
         try:
@@ -371,8 +378,9 @@ class image_converter:
         cv2.imshow("Image window", processed_image)
         # cv2.imshow('self last frame', self.last_frame)
         cv2.waitKey(1)
-
-        self.centroid_location_pub.publish(location)
+        print('process image timer started', self.timer_started)
+        if self.timer_started:
+            self.centroid_location_pub.publish(location)
         if cropped_plate is not None:
             self.cropped_plate_pub.publish(
                 self.bridge.cv2_to_imgmsg(cropped_plate, 'bgr8'))

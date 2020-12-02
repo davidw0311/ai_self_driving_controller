@@ -22,12 +22,7 @@ from tensorflow.python.keras.models import load_model
 david_path = '/home/davidw0311'
 cnn_path = '/ros_ws/src/my_controller/cnn_training/'
 PATH = david_path + cnn_path
-model_path = PATH + 'detector_model_v5'
-
-
-
-    
-
+model_path = PATH + 'detector_model_v7_8epoch_lenet'
 
 my_dim_rev = (105, 150)
 
@@ -73,7 +68,7 @@ class plate_decrypter:
         self.graph = tf.compat.v1.get_default_graph()
         self.conv_model = load_model(model_path, compile=True)
         print('loaded model')
-        print(self.conv_model.summary())
+        # print(self.conv_model.summary())
         
         self.bridge = CvBridge()
         self.license_value_pub = rospy.Publisher('/plate_value', String, queue_size=1)
@@ -106,17 +101,17 @@ class plate_decrypter:
             # ret, thresh = cv2.threshold(img,120,255,cv2.THRESH_BINARY_INV)
             total_thresh = cv2.bitwise_or(thresh_blue, thresh_black)
             total_thresh = ~total_thresh
-            cv2.imshow('thresh', total_thresh)
+            # cv2.imshow('thresh', total_thresh)
 
             P, ID, A1, A2, N1, N2 = cut(total_thresh)
             
             # cv2.imshow('P', P)
             # cv2.imshow('ID', ID)
-            cv2.imshow('A1', A1)
-            cv2.imshow('A2', A2)
-            cv2.imshow('N1', N1)
-            cv2.imshow('N2', N2)
-            cv2.waitKey(1)
+            # cv2.imshow('A1', A1)
+            # cv2.imshow('A2', A2)
+            # cv2.imshow('N1', N1)
+            # cv2.imshow('N2', N2)
+            # cv2.waitKey(1)
 
             with self.graph.as_default():
                 set_session(self.sess)
