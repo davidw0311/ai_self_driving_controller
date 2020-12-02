@@ -119,7 +119,7 @@ damping_vel.angular.z = 0
 class velocity_control:
 
     def __init__(self):
-        self.init_time = time.time()
+        self.init_time = None
         self.moving_pedestrian_array = []
         for i in range(pal):
             # stationary = False, moving = True
@@ -180,15 +180,15 @@ class velocity_control:
         cv2.createTrackbar('integral','PID Controller',0,100,nothing)
         cv2.createTrackbar('scale factor','PID Controller',1000,5000,nothing)
         
-        if (time.time() - self.init_time) < 2.0:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 15)
-            cv2.setTrackbarPos('turning speed', 'PID Controller', 32)
-            # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
-            # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
-            cv2.setTrackbarPos('proportional', 'PID Controller', 14)
-            cv2.setTrackbarPos('derivative', 'PID Controller', 7)
-            cv2.setTrackbarPos('integral', 'PID Controller', 3)
-            cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
+    # if (time.time() - self.init_time) < 2.0:
+        cv2.setTrackbarPos('driving speed', 'PID Controller', 12)
+        cv2.setTrackbarPos('turning speed', 'PID Controller', 30)
+        # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
+        # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
+        cv2.setTrackbarPos('proportional', 'PID Controller', 14)
+        cv2.setTrackbarPos('derivative', 'PID Controller', 7)
+        cv2.setTrackbarPos('integral', 'PID Controller', 3)
+        cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
         give_a_boost = False
         rate = rospy.Rate(20)
         # print('moving pedestrian array', self.moving_pedestrian_array)
@@ -216,9 +216,13 @@ class velocity_control:
 
             velocity.linear.x = 0
             velocity.angular.z = -0.8
-            if time.time() - self.init_time < 5:
-                velocity.angular.z = 0.8
-        
+            if self.init_time is not None:
+                if time.time() - self.init_time < 6:
+                    print('first intersection: turning left')
+                    velocity.angular.z = 0.8
+                else:
+                    print('veering right, time is: ' + str(time.time()-self.init_time))
+
         if give_a_boost:
             velocity.linear.x = velocity.linear.x * 1.3
         
@@ -253,6 +257,8 @@ class velocity_control:
         self.controller_state = data.data
         if (data.data == 'timer_started'):
             self.timer_started = True
+            if self.init_time is None:
+                self.init_time = time.time()
 
 
 

@@ -70,8 +70,8 @@ class reporter:
 
             if conf > self.plates[loc]:
                 self.plates[loc] = conf
-                license_plate_str = self.msg(loc, plate_id)   # replace loc and id
-                # rospy.loginfo(license_plate_str)
+                license_plate_str = self.msg(loc, plate_id)
+                rospy.loginfo(license_plate_str)
                 self.pub.publish(license_plate_str)
             
             print(str(loc)+plate_id)

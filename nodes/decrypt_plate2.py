@@ -18,8 +18,9 @@ from keras import models
 
 my_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 david_path = '/home/davidw0311'
+sylvia_path = '/home/sylvia'
 cnn_path = '/ros_ws/src/my_controller/cnn_training/'
-PATH = david_path + cnn_path
+PATH = sylvia_path + cnn_path
 model_path = PATH + 'alphanumeric_detector_model_v2'
 
 my_dim_rev = (105, 150)

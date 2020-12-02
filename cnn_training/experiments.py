@@ -112,7 +112,7 @@ def generate_dev_set():
 #generate_dev_set()
 
 
-#delete_files(aug_data_path)
+delete_files(aug_data_path)
 
 # im = np.array(Image.open(
 #     '/home/sylvia/ros_ws/src/my_controller/cnn_training/augmented_data/1/1_0_1338.png'))

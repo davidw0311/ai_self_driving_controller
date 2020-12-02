@@ -6,7 +6,9 @@ from keras.preprocessing.image import ImageDataGenerator
 import cv2
 import random
 
-PATH = "/home/davidw0311/ros_ws/src/my_controller/cnn_training/"
+david = '/home/davidw0311'
+sylvia = '/home/sylvia'
+PATH = sylvia + "/ros_ws/src/my_controller/cnn_training/"
 folders_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 template_path = PATH + 'augmented_data'
@@ -68,7 +70,7 @@ aug_data_path = PATH + 'augmented_data/'
 
 def save_augmented_photos(img, character, num):
     x = np.expand_dims(img, axis=0)
-    i = 0
+    i = 1
     this_path = aug_data_path + character
     
     if not os.path.exists(this_path):
@@ -78,14 +80,15 @@ def save_augmented_photos(img, character, num):
                             save_to_dir=this_path, 
                             save_prefix=character):
         i += 1
-        if i > num: # 20 generates 12? images? 10 generages 1
+        if i > num: #
             break
 
 
+david_path = '/home/davidw0311/ros_ws/src/my_controller/cnn_training/gazebo_images'
+sylvia_path = '/home/sylvia/ros_ws/src/my_controller/cnn_training/gazebo_images/'
+for folder in os.listdir(sylvia_path):
 
-for folder in os.listdir('/home/davidw0311/ros_ws/src/my_controller/cnn_training/gazebo_images'):
-
-    path = '/home/davidw0311/ros_ws/src/my_controller/cnn_training/gazebo_images/' + folder
+    path = sylvia_path + folder
     num_imgs = len(os.listdir(path))
 
     for image in os.listdir(path):

@@ -20,9 +20,10 @@ from tensorflow.python.keras.backend import set_session
 from tensorflow.python.keras.models import load_model
 
 david_path = '/home/davidw0311'
+sylvia_path = '/home/sylvia'
 cnn_path = '/ros_ws/src/my_controller/cnn_training/'
-PATH = david_path + cnn_path
-model_path = PATH + 'detector_model_v5'
+PATH = sylvia_path   + cnn_path
+model_path = PATH + 'detector_model_v6_7epoch_lenet'
 
 
 
@@ -112,11 +113,11 @@ class plate_decrypter:
             
             # cv2.imshow('P', P)
             # cv2.imshow('ID', ID)
-            cv2.imshow('A1', A1)
-            cv2.imshow('A2', A2)
-            cv2.imshow('N1', N1)
-            cv2.imshow('N2', N2)
-            cv2.waitKey(1)
+            # cv2.imshow('A1', A1)
+            # cv2.imshow('A2', A2)
+            # cv2.imshow('N1', N1)
+            # cv2.imshow('N2', N2)
+            # cv2.waitKey(1)
 
             with self.graph.as_default():
                 set_session(self.sess)
