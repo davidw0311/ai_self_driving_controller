@@ -78,7 +78,7 @@ class reporter:
             print('plate read states')
             for i in range(1,7):
                 print(self.plates[i])
-                if self.plates[i] < 0.98:
+                if self.plates[i] < 0.965:
                     all_outside_confirmed = False
     
             print('all outside confirmed', all_outside_confirmed, '\n')

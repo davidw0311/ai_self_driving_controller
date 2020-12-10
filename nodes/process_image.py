@@ -174,7 +174,10 @@ def process_frame(frame, last_cX, last_frame):
             moving_pedestrian = True
             cv2.putText(original_frame, 'MOVING PEDESTRIAN!', (400, 100),
                         cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 2, cv2.LINE_AA)
-
+    if (red_cX > 100):
+        go_fast = True
+    else:
+        go_fast = False
       #     print('mean squared error', mse)
 
     box_frame = cv2.inRange(original_frame, (90, 0, 0), (130, 30, 30))
@@ -333,22 +336,19 @@ def process_frame(frame, last_cX, last_frame):
     cv2.circle(original_frame, (road_cX, int(height/2)), 30, (255, 255, 0), -1)
     cv2.circle(original_frame, (line_cX, line_cY), 20, (0, 255, 255), -1)
 
-    return original_frame, int((line_cX+2*road_cX)/3), at_crosswalk, moving_pedestrian, at_intersection, cropped_plate
+    return original_frame, int((line_cX+2*road_cX)/3), at_crosswalk, moving_pedestrian, at_intersection, cropped_plate, go_fast
 
 
 class image_converter:
 
     def __init__(self):
-        self.centroid_location_pub = rospy.Publisher(
-            "centroid_location", Float32, queue_size=1)
-        self.at_crosswalk_pub = rospy.Publisher(
-            "at_crosswalk", Bool, queue_size=1)
-        self.at_intersection_pub = rospy.Publisher(
-            "at_intersection", Bool, queue_size=1)
-        self.moving_pedestrian_pub = rospy.Publisher(
-            "moving_pedestrian", Bool, queue_size=1)
-        self.cropped_plate_pub = rospy.Publisher(
-            "cropped_plate", Image, queue_size=1)
+        self.centroid_location_pub = rospy.Publisher("centroid_location", Float32, queue_size=1)
+        self.at_crosswalk_pub = rospy.Publisher("at_crosswalk", Bool, queue_size=1)
+        self.at_intersection_pub = rospy.Publisher("at_intersection", Bool, queue_size=1)
+        self.go_fast_pub = rospy.Publisher("go_fast", Bool, queue_size = 1)
+        self.moving_pedestrian_pub = rospy.Publisher("moving_pedestrian", Bool, queue_size=1)
+        self.cropped_plate_pub = rospy.Publisher("cropped_plate", Image, queue_size=1)
+        self.detecting_plate_pub = rospy.Publisher("detecting_plate", Bool, queue_size = 1)
         self.timer_started = False
         self.last_location = 540
         self.last_frame = np.zeros((720, 1280, 3))
@@ -368,25 +368,32 @@ class image_converter:
         except CvBridgeError as e:
             print(e)
 
-        processed_image, location, at_crosswalk, moving_pedestrian, at_intersection, cropped_plate = process_frame(
+        processed_image, location, at_crosswalk, moving_pedestrian, at_intersection, cropped_plate, go_fast = process_frame(
             np.copy(cv_image), self.last_location, self.last_frame)
         self.last_location = location
         self.last_frame = cv_image
         width, height = processed_image.shape[1], processed_image.shape[0]
         processed_image_resized = cv2.resize(processed_image, (int(
-            width/2), int(height/2)), interpolation=cv2.INTER_AREA)
-        cv2.imshow("Image window", processed_image)
+            width/1.5), int(height/1.5)), interpolation=cv2.INTER_AREA)
+        cv2.imshow("Image window", processed_image_resized)
         # cv2.imshow('self last frame', self.last_frame)
         cv2.waitKey(1)
-        print('process image timer started', self.timer_started)
+        # print('process image timer started', self.timer_started)
         if self.timer_started:
             self.centroid_location_pub.publish(location)
         if cropped_plate is not None:
             self.cropped_plate_pub.publish(
                 self.bridge.cv2_to_imgmsg(cropped_plate, 'bgr8'))
+            self.detecting_plate_pub.publish(True)
+        else:
+            self.detecting_plate_pub.publish(False)
         self.at_crosswalk_pub.publish(at_crosswalk)
         self.moving_pedestrian_pub.publish(moving_pedestrian)
         self.at_intersection_pub.publish(at_intersection)
+        
+        self.go_fast_pub.publish(go_fast)
+    
+        
 
 
 def main(args):

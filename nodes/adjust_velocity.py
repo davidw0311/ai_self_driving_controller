@@ -121,6 +121,9 @@ class velocity_control:
     def __init__(self):
         self.init_time = None
         self.enter_time = None
+        self.at_crosswalk = False
+        self.go_fast = False
+        self.detecting_plate = False
         self.moving_pedestrian_array = []
         for i in range(pal):
             # stationary = False, moving = True
@@ -139,14 +142,18 @@ class velocity_control:
         self.at_crosswalk_sub = rospy.Subscriber('/at_crosswalk', Bool, self.at_crosswalk_callback)
         self.moving_pedestrian = rospy.Subscriber('/moving_pedestrian', Bool, self.moving_pedestrian_callback)
         self.at_intersection_sub = rospy.Subscriber('/at_intersection', Bool, self.at_intersection_callback)
-        
+        self.detecting_plate_sub = rospy.Subscriber('/detecting_plate', Bool, self.detecting_plate_callback)
+        self.go_fast_sub = rospy.Subscriber('/go_fast', Bool, self.go_fast_callback)
         self.pid_controller = PID(0,0,0,time.time())
         
-    def get_velocity(self, centroid, inside):
+    def get_velocity(self, centroid, inside, go_fast, detecting_plate):
 
         # turning_factor = pid_control(centroid)
         turning_factor = 1
+        
         driving_speed = cv2.getTrackbarPos('driving speed', "PID Controller") / 100.0
+        # if detecting_plate and not go_fast:
+        #     driving_speed = driving_speed /2
         turning_speed = cv2.getTrackbarPos('turning speed', "PID Controller") / 100.0
         
         self.pid_controller.setKp(cv2.getTrackbarPos('proportional', "PID Controller"))
@@ -158,6 +165,7 @@ class velocity_control:
 
         scaling_factor = cv2.getTrackbarPos('scale factor', "PID Controller")
         pid_factor = self.pid_controller.output / scaling_factor
+            
         # print("pid factor ", pid_factor)
         velocity = Twist()
 
@@ -183,15 +191,23 @@ class velocity_control:
         cv2.createTrackbar('integral','PID Controller',0,100,nothing)
         cv2.createTrackbar('scale factor','PID Controller',1000,5000,nothing)
         
-        # if (time.time() - self.init_time) < 2.0:
-        cv2.setTrackbarPos('driving speed', 'PID Controller', 12)
-        cv2.setTrackbarPos('turning speed', 'PID Controller', 28)
-        # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
-        # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
-        cv2.setTrackbarPos('proportional', 'PID Controller', 14)
-        cv2.setTrackbarPos('derivative', 'PID Controller', 7)
-        cv2.setTrackbarPos('integral', 'PID Controller', 3)
-        cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
+        if (time.time() - self.init_time) < 2.0:
+            cv2.setTrackbarPos('driving speed', 'PID Controller', 10)
+            cv2.setTrackbarPos('turning speed', 'PID Controller', 32)
+            # cv2.setTrackbarPos('driving speed', 'PID Controller', 0)
+            # cv2.setTrackbarPos('turning speed', 'PID Controller', 0)
+            cv2.setTrackbarPos('proportional', 'PID Controller', 11)
+            cv2.setTrackbarPos('derivative', 'PID Controller', 7)
+            cv2.setTrackbarPos('integral', 'PID Controller', 3)
+            cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
+        
+        
+        if self.go_fast:
+            cv2.setTrackbarPos('driving speed', 'PID Controller', 13)
+        else:
+            cv2.setTrackbarPos('driving speed', 'PID Controller', 9)
+
+
         give_a_boost = False
         rate = rospy.Rate(20)
         # print('moving pedestrian array', self.moving_pedestrian_array)
@@ -209,10 +225,9 @@ class velocity_control:
             velocity.linear.x = 0
             velocity.angular.z = 0
 
-            self.velocity_pub.publish(damping_vel)
-
         else:
-            velocity = self.get_velocity(self.centroid_location, self.inside)
+            velocity = self.get_velocity(self.centroid_location, self.inside, self.go_fast, self.detecting_plate)
+            
         
         if self.at_intersection:
             self.velocity_pub.publish(damping_vel)
@@ -239,14 +254,16 @@ class velocity_control:
         
 
         if self.timer_started:
-            print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
-            print('current time', time.time())
- 
+            # print("speed: " + str(velocity.linear.x) + "  turn: " + str(velocity.angular.z) + "\n")
+            # print('current time', time.time())
+            # print('moving pedestrian ', self.moving_pedestrian
+                
             self.velocity_pub.publish(velocity)
 
     def at_crosswalk_callback(self, data):
         # print('at cross walk', data.data)
         # print('last time at crosswalk', self.last_time_at_crosswalk)
+        self.at_crosswalk = data.data
         if data.data == True:
             # print('last time', self.last_time_at_crosswalk)
             # print('current time', time.time())
@@ -276,6 +293,12 @@ class velocity_control:
         
         if (data.data == 'go_inside') or self.go_inside:
             self.go_inside = True
+    
+    def detecting_plate_callback(self, data):
+        self.detecting_plate = data.data
+    
+    def go_fast_callback(self, data):
+        self.go_fast = data.data
 
 
 
