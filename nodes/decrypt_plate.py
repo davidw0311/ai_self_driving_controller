@@ -127,8 +127,6 @@ class plate_decrypter:
                     
                     return a_prediction, a_confidence, a_predictions
                 
-                
-                
                 P_prediction, P_confidence, P_predictions = get_prediction(P, isnum=False)
                 # print(P_prediction,'P predictions', np.round(np.array(P_predictions), 3))
                 ID_prediction, ID_confidence, ID_predictions = get_prediction(ID, isnum=True)
@@ -138,9 +136,6 @@ class plate_decrypter:
                 # print(A1_prediction,'a1 predictions', np.round(np.array(A1_predictions), 3))
                 N1_prediction, N1_confidence, N1_predictions = get_prediction(N1, isnum=True)
                 N2_prediction, N2_confidence, N2_predictions = get_prediction(N2, isnum=True)
-
-                
-                
 
             prediction = ID_prediction + A1_prediction + A2_prediction + N1_prediction + N2_prediction
             confidence = (ID_confidence + A1_confidence + A2_confidence + N1_confidence + N2_confidence)/5
@@ -161,5 +156,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    
     main(sys.argv)

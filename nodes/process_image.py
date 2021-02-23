@@ -10,42 +10,37 @@ import cv2
 import rospy
 import sys
 import roslib
-roslib.load_manifest('my_controller')
-
 import random
 import string
+roslib.load_manifest('my_controller')
 
 def get_random_string(length):
     letters = string.ascii_lowercase
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
 
+# for collecting images of environment
 generate_images = False
 
+# centroids of grassy regions
 grass_centroids = []
 for t in range(20):
     grass_centroids.append(0)
 
 def process_frame(frame, last_cX, last_frame):
-
+    # cv2.imshow('frame', frame)
     original_frame = np.copy(frame)
     height = frame.shape[0]
     width = frame.shape[1]
     dilation_kernel = np.ones((39, 39), np.uint8)
-
+    
+    # detecting the road
     road_frame = cv2.inRange(original_frame, (70, 70, 70), (90, 90, 90))
     road_frame[0:int(height/2),:] = np.zeros_like(road_frame[0:int(height/2), :])
     kernel = np.ones((9, 9), np.uint8)
     lines_frame = cv2.inRange(original_frame, (245, 245, 245), (255, 255, 255))
 
-    # detect parked cars
-
-#     car_frame_light_blue = cv2.inRange(original_frame[int(height/2):, :], (180,80,80), (220, 120, 120))
-#     car_frame_dark_blue = cv2.inRange(original_frame[int(height/2):, :], (90,0,0), (130, 30, 30))
-#     car_frame = cv2.bitwise_or(car_frame_dark_blue, car_frame_light_blue)
-
-    # hsv_threshold = cv2.inRange(hsv, (0, 0, 0), (5, 100, 255))
-    roi_offset = int(height/3)
+    # detect license plate
     license_mask_light_gray = cv2.inRange(original_frame, (97, 97, 97), (110, 110, 110))
     license_mask_dark_gray = cv2.inRange(original_frame, (190, 190, 190), (210, 210, 210))
     license_mask_other_gray = cv2.inRange(original_frame, (110, 110, 110), (130, 130, 130))
@@ -55,9 +50,9 @@ def process_frame(frame, last_cX, last_frame):
     license_mask = cv2.dilate(license_mask, np.ones((7, 7), np.uint8), iterations=1)
     # cv2.imshow('license_mask', license_mask)
 
-
+    # detect the parked cars
     cropped_plate = None
-
+    roi_offset = int(height/3)
     _, car_contours, _ = cv2.findContours(license_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if len(car_contours) > 0:
         max_area = 0
@@ -83,8 +78,7 @@ def process_frame(frame, last_cX, last_frame):
         height_of_box = max(abs(box[0][1] - box[1][1]), abs(box[0][1] - box[2][1]))
         width_of_box = max(abs(box[0][0] - box[1][0]), abs(box[0][0] - box[2][0]))
 
-
-        close_contours=[]
+        close_contours=[] # contours near the center contour
         for c in car_contours:
             M = cv2.moments(c)
             cX = int(M["m10"] / M["m00"])
@@ -107,11 +101,13 @@ def process_frame(frame, last_cX, last_frame):
             rect = cv2.minAreaRect(closest_contour)
             box = cv2.boxPoints(rect)
             box = np.int0(box)
-            # cv2.drawContours(blank, [biggest_car_contour], 0, (0,255,0), 3)
+            blank = np.zeros_like(original_frame)
+            cv2.drawContours(blank, [biggest_car_contour], 0, (0,255,0), 3)
+            # cv2.imshow('biggest car contour', blank)
             combined_contour = np.concatenate((biggest_car_contour, closest_contour), axis = 0)
         
         else:
-            #sometimes the detection detect the whole sign as one contour
+            #for if the detection detects the whole sign as one contour
             combined_contour = biggest_car_contour
 
         rect = cv2.minAreaRect(combined_contour)
@@ -123,6 +119,7 @@ def process_frame(frame, last_cX, last_frame):
         bot_right_x = max([x1,x2,x3,x4])
         bot_right_y = max([y1,y2,y3,y4])
         
+        # cropping the plate
         cropped_plate = original_frame[top_left_y:bot_right_y, top_left_x:bot_right_x]
         if cropped_plate.shape[0] > 10 and cropped_plate.shape[1] > 10:
             cropped_plate = cv2.resize(cropped_plate, (300,400), interpolation=cv2.INTER_AREA)
@@ -133,8 +130,9 @@ def process_frame(frame, last_cX, last_frame):
             if (M['m00'] > 5):
                 
                 # cv2.imshow('letters of plate', letters_of_plate)
-                cv2.imshow('license plate', cropped_plate)
-
+                # cv2.imshow('license plate', cropped_plate)
+                
+                # for collecting image data
                 if generate_images:
                     random_name = get_random_string(10)
                     name = '/home/davidw0311/plate_images/' + random_name + '.jpg'
@@ -149,6 +147,8 @@ def process_frame(frame, last_cX, last_frame):
     
     # detect the stop_walk
     red_frame = cv2.inRange(original_frame, (0, 0, 245), (10, 10, 255))
+    # cv2.imshow('red bar frame', red_frame)
+
     M = cv2.moments(red_frame)
     if M["m00"] != 0:
         red_cX = int(M["m10"] / M["m00"])
@@ -157,9 +157,9 @@ def process_frame(frame, last_cX, last_frame):
         red_cX = 0
         red_cY = 0
 
-    # cv2.imshow('red bar frame', red_frame)
     at_crosswalk = False
     moving_pedestrian = False
+    # if stopwalk is close enough to robot, start pedestrian detection
     if (red_cY > 600):
       #     cv2.imshow('original',original_frame)
       #     cv2.imshow('last frame', last_frame)
@@ -182,23 +182,24 @@ def process_frame(frame, last_cX, last_frame):
 
     box_frame = cv2.inRange(original_frame, (90, 0, 0), (130, 30, 30))
     box_frame = cv2.dilate(box_frame, dilation_kernel, iterations=2)
-
-#     cv2.imshow('box frame', box_frame)
-#     cv2.imshow('expanded box', expanded_box_frame)
-    lines_frame = cv2.bitwise_or(lines_frame, box_frame)
     # cv2.imshow('box frame', box_frame)
+
+    lines_frame = cv2.bitwise_or(lines_frame, box_frame)
     lines_frame = cv2.dilate(lines_frame, kernel, iterations=2)
     lines_frame = cv2.morphologyEx(lines_frame, cv2.MORPH_CLOSE, kernel)
     lines_frame = cv2.GaussianBlur(lines_frame, (7, 7), 0)
+    # cv2.imshow('lines frame dilated', lines_frame)
 
     road_frame = road_frame - box_frame
     road_frame = cv2.dilate(road_frame, kernel, iterations=2)
     road_frame = cv2.morphologyEx(road_frame, cv2.MORPH_CLOSE, kernel)
     road_frame = cv2.GaussianBlur(road_frame, (7, 7), 0)
+    # cv2.imshow('road frame', road_frame)
 
     grass_frame = cv2.inRange(original_frame, (55, 125, 15), (85, 155, 45))
     grass_frame = cv2.erode(grass_frame, kernel, iterations=1)
     grass_frame = cv2.dilate(grass_frame, kernel, iterations=3)
+    # cv2.imshow('grass frame', grass_frame)
     _, grass_contours, _ = cv2.findContours(
         grass_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -231,18 +232,30 @@ def process_frame(frame, last_cX, last_frame):
 
 #     cv2.putText(original_frame,str(grass_cX) +' '+ str(grass_cY),(400,400), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 2, cv2.LINE_AA)
 
-#     cv2.imshow('grass frame', grass_frame)
-#     cv2.imshow('road_frame', road_frame)
-    cv2.waitKey(1)
+    # canny edge detection
     low_thresh, high_thresh = 50, 150
     edges = cv2.Canny(road_frame, low_thresh, high_thresh)
+    # cv2.imshow('edges', edges)
     # edges = cv2.dilate(edges, kernel, iterations=1)
 
-#     cv2.imshow('lines frame dilated', lines_frame)
-#     cv2.imshow('edges', edges)
-#     cv2.imshow('road frame', road_frame)
+    # applies hough transform and returns x,y location of intersecting centroid. Draws the lines on original frame
+    line_cX, line_cY, original_frame = get_centroid_from_hough(edges, original_frame, last_cX, height, width)
+
+    M = cv2.moments(road_frame)
+    if M["m00"] != 0:
+        road_cX = int(M["m10"] / M["m00"])
+    else:
+        road_cX = int(width/2)
+
+    cv2.circle(original_frame, (red_cX, red_cY), 10, [0, 0, 0], -1)
+    cv2.circle(original_frame, (road_cX, int(height/2)), 30, (255, 255, 0), -1)
+    cv2.circle(original_frame, (line_cX, line_cY), 20, (0, 255, 255), -1)
+    # cv2.imshow('grass frame', grass_frame)
     cv2.waitKey(1)
 
+    return original_frame, int((line_cX+2*road_cX)/3), at_crosswalk, moving_pedestrian, at_intersection, cropped_plate, go_fast
+
+def get_centroid_from_hough(edges, original_frame, last_cX, height, width):
     rho = 1  # distance resolution in pixels of the Hough grid
     theta = np.pi / 180  # angular resolution in radians of the Hough grid
     # minimum number of votes (intersections in Hough grid cell)
@@ -254,7 +267,6 @@ def process_frame(frame, last_cX, last_frame):
     # Output "lines" is an array containing endpoints of detected line segments
     # lines = cv2.HoughLinesP(edges, rho=rho, theta=theta, threshold=threshold, lines=np.array([]),
     #                     minLineLength=min_line_length, maxLineGap=max_line_gap)
-
     lines = cv2.HoughLines(edges, rho=1, theta=math.pi/180,
                            threshold=100, min_theta=math.pi/180, max_theta=math.pi)
     if lines is not None:
@@ -291,6 +303,7 @@ def process_frame(frame, last_cX, last_frame):
             pt2 = (int(x0 - const*(-b)), int(y0 - const*(a)))
             cv2.line(original_frame, pt1, pt2, (0, 0, 255), 3, cv2.LINE_AA)
 
+    # find intersection points between lines
     intersect_points = []
     slopes = []
     if lines is not None:
@@ -311,7 +324,6 @@ def process_frame(frame, last_cX, last_frame):
                 x = int((b - next_b)/(next_m - m))
                 y = int(m*x + b)
                 intersect_points.append((x, y))
-
             i += 1
 
     sum_x, sum_y = 0, 0
@@ -325,19 +337,8 @@ def process_frame(frame, last_cX, last_frame):
     else:
         line_cX = last_cX
         line_cY = int(height/2)
-
-    M = cv2.moments(road_frame)
-    if M["m00"] != 0:
-        road_cX = int(M["m10"] / M["m00"])
-    else:
-        road_cX = int(width/2)
-
-    cv2.circle(original_frame, (red_cX, red_cY), 10, [0, 0, 0], -1)
-    cv2.circle(original_frame, (road_cX, int(height/2)), 30, (255, 255, 0), -1)
-    cv2.circle(original_frame, (line_cX, line_cY), 20, (0, 255, 255), -1)
-
-    return original_frame, int((line_cX+2*road_cX)/3), at_crosswalk, moving_pedestrian, at_intersection, cropped_plate, go_fast
-
+    
+    return line_cX, line_cY, original_frame
 
 class image_converter:
 
@@ -392,9 +393,6 @@ class image_converter:
         self.at_intersection_pub.publish(at_intersection)
         
         self.go_fast_pub.publish(go_fast)
-    
-        
-
 
 def main(args):
     rospy.init_node('image_converter', anonymous=True)

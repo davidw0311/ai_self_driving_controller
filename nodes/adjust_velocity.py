@@ -110,7 +110,7 @@ class PID:
 def nothing(x):
     pass
 
-#pedestrial array length
+#pedestriaan array length
 pal = 15
 damping_vel = Twist()
 damping_vel.linear.x = 0.10
@@ -148,12 +148,10 @@ class velocity_control:
         
     def get_velocity(self, centroid, inside, go_fast, detecting_plate):
 
-        # turning_factor = pid_control(centroid)
+        # how much should the pid adjust for turning
         turning_factor = 1
-        
+
         driving_speed = cv2.getTrackbarPos('driving speed', "PID Controller") / 100.0
-        # if detecting_plate and not go_fast:
-        #     driving_speed = driving_speed /2
         turning_speed = cv2.getTrackbarPos('turning speed', "PID Controller") / 100.0
         
         self.pid_controller.setKp(cv2.getTrackbarPos('proportional', "PID Controller"))
@@ -202,10 +200,10 @@ class velocity_control:
             cv2.setTrackbarPos('scale factor', 'PID Controller', 1000)
         
         
-        if self.go_fast:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 13)
-        else:
-            cv2.setTrackbarPos('driving speed', 'PID Controller', 9)
+        # if self.go_fast:
+        #     cv2.setTrackbarPos('driving speed', 'PID Controller', 13)
+        # else:
+        #     cv2.setTrackbarPos('driving speed', 'PID Controller', 9)
 
 
         give_a_boost = False
